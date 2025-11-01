@@ -10,7 +10,6 @@ const initialState = {
     skills: '',
     expertise: 'Beginner'
   },
-  isDarkMode: false,
   analysisResult: null,
   isLoading: false,
   currentSkills: '',

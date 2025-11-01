@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { useTheme } from '../context/ThemeContext';
 
 const CareerPath = () => {
   const navigate = useNavigate();
   const { currentSkills, setCurrentSkills, setCurrentExpertise } = useAppContext();
-  const { isDark } = useTheme();
   const [selectedCareer, setSelectedCareer] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -193,50 +191,34 @@ const CareerPath = () => {
   };
 
   return (
-    <div className={`min-h-screen professional-background relative overflow-hidden ${isDark ? 'dark' : 'light'}`}>
+    <div className="min-h-screen professional-background relative overflow-hidden dark">
       {/* Enhanced Creative Background System */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className={`absolute inset-0 ${isDark ? 'bg-gradient-to-br from-gray-900 to-gray-950' : 'bg-gradient-to-br from-gray-50 to-gray-100'}`}></div>
-        
-        {/* Floating Orbs with Organic Movement */}
-        <div className={`absolute top-20 right-20 w-72 h-72 rounded-full opacity-15 animate-pulseGlow blur-3xl ${isDark ? 'bg-gradient-to-r from-blue-500/40 to-indigo-500/40' : 'bg-gradient-to-r from-blue-400/30 to-indigo-400/30'} animate-float`}></div>
-        <div className={`absolute bottom-20 left-20 w-48 h-48 rounded-full opacity-20 animate-drift blur-2xl ${isDark ? 'bg-gradient-to-r from-purple-500/40 to-blue-500/40' : 'bg-gradient-to-r from-purple-400/30 to-blue-400/30'}`} style={{animationDuration: '12s'}}></div>
-        
-        {/* Subtle particle effects */}
-        <div className={`absolute top-1/3 left-1/4 w-2 h-2 rounded-full animate-float ${isDark ? 'bg-blue-400' : 'bg-blue-500'}`} style={{animationDuration: '8s', marginLeft: '-1px', marginTop: '-1px'}}></div>
-        <div className={`absolute top-1/4 left-2/3 w-1.5 h-1.5 rounded-full animate-drift ${isDark ? 'bg-indigo-400' : 'bg-indigo-500'}`} style={{animationDuration: '10s', marginLeft: '-0.75px', marginTop: '-0.75px'}}></div>
-        <div className={`absolute bottom-1/3 right-1/3 w-1 h-1 rounded-full animate-driftDelayed ${isDark ? 'bg-purple-400' : 'bg-purple-500'}`} style={{animationDuration: '14s', marginLeft: '-0.5px', marginTop: '-0.5px'}}></div>
-        <div className={`absolute top-2/3 left-1/5 w-2 h-2 rounded-full animate-float ${isDark ? 'bg-blue-300' : 'bg-blue-400'}`} style={{animationDuration: '11s', marginLeft: '-1px', marginTop: '-1px'}}></div>
-        
-        {/* Gentle rotating elements */}
-        <div className={`absolute top-1/6 right-1/6 w-20 h-20 border ${isDark ? 'border-blue-500/30' : 'border-blue-400/30'} rounded-full animate-rotateSlow`} style={{animationDuration: '25s'}}></div>
-        
-        {/* Pulsing glow effects */}
-        <div className={`absolute bottom-1/4 right-1/4 w-10 h-10 rounded-full ${isDark ? 'bg-blue-500/20' : 'bg-blue-400/20'} animate-pulseGlow`} style={{animationDuration: '7s'}}></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-gray-950"></div>
       </div>
 
-      <div className="relative z-10 pt-32 pb-16 px-6">
+      <div className="relative z-10 pt-20 pb-16 px-6">
         <div className="max-w-7xl mx-auto">
           {/* Revolutionary Header */}
           <div className="text-center mb-20">
-            <div className={`inline-flex items-center px-8 py-4 rounded-3xl mb-10 backdrop-blur-xl border transition-all duration-500 hover:scale-105 gradient-border animate-levitate ${isDark ? 'border-gray-700/50' : 'border-gray-200/50'}`}>
+            <div className={`inline-flex items-center px-8 py-4 rounded-3xl mb-10 backdrop-blur-xl border transition-all duration-500 hover:scale-105 gradient-border animate-levitate border-gray-700/50`}>
               <span className="font-extrabold text-xl gradient-text">AI-Powered Career Discovery</span>
             </div>
             
-            <h1 className={`text-5xl md:text-7xl font-black mb-8 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            <h1 className={`text-5xl md:text-7xl font-black mb-8 text-white`}>
               DISCOVER YOUR
               <span className={`block gradient-text-animated`}>
                 PERFECT CAREER
               </span>
             </h1>
             
-            <p className={`text-xl max-w-4xl mx-auto mb-10 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+            <p className={`text-xl max-w-4xl mx-auto mb-10 text-gray-300`}>
               Explore high-demand careers with real salary data, growth projections, and personalized learning paths. 
               Your future starts with the right choice.
             </p>
 
             {currentSkills && (
-              <div className={`inline-flex items-center px-6 py-3 rounded-2xl backdrop-blur-xl border mb-10 animate-pulse gradient-border ${isDark ? 'border-gray-700/50' : 'border-gray-200/50'}`}>
+              <div className={`inline-flex items-center px-6 py-3 rounded-2xl backdrop-blur-xl border mb-10 animate-pulse gradient-border border-gray-700/50`}>
                 <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -249,19 +231,19 @@ const CareerPath = () => {
 
           {/* Loading State */}
           {isLoading && (
-            <div className={`fixed inset-0 ${isDark ? 'bg-black/70' : 'bg-gray-900/70'} backdrop-blur-md flex items-center justify-center z-50`}>
-              <div className={`p-12 rounded-3xl backdrop-blur-xl border-2 text-center gradient-border animate-pulse ${isDark ? 'border-gray-700/50' : 'border-gray-200/50'}`}>
+            <div className={`fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50`}>
+              <div className={`p-12 rounded-3xl backdrop-blur-xl border-2 text-center gradient-border animate-pulse border-gray-700/50`}>
                 <div className="flex justify-center mb-6">
-                  <div className={`w-20 h-20 border-4 border-t-transparent rounded-full animate-spin ${isDark ? 'border-blue-500' : 'border-blue-400'}`}></div>
+                  <div className={`w-20 h-20 border-4 border-t-transparent rounded-full animate-spin border-blue-500`}></div>
                 </div>
-                <h3 className={`text-3xl font-extrabold mt-6 mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <h3 className={`text-3xl font-extrabold mt-6 mb-3 text-white`}>
                   Analyzing Career Path
                 </h3>
-                <p className={`text-lg ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                <p className={`text-lg text-gray-300`}>
                   Generating your personalized learning roadmap...
                 </p>
                 <div className="mt-6 flex justify-center">
-                  <div className={`w-48 h-2 rounded-full overflow-hidden ${isDark ? 'bg-gray-700' : 'bg-gray-300'}`}>
+                  <div className={`w-48 h-2 rounded-full overflow-hidden bg-gray-700`}>
                     <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full animate-pulse" style={{width: '75%'}}></div>
                   </div>
                 </div>
@@ -275,11 +257,9 @@ const CareerPath = () => {
               <div 
                 key={careerName}
                 onClick={() => handleCareerSelect(careerName)}
-                className={`group relative p-8 rounded-3xl backdrop-blur-xl border cursor-pointer transition-all duration-500 hover:scale-105 hover:-translate-y-2 gradient-border tilt-effect animate-fadeIn ${isDark ? 'border-gray-700/50' : 'border-gray-200/50'}`}
+                className={`group relative p-8 rounded-3xl backdrop-blur-xl border cursor-pointer transition-all duration-500 hover:scale-105 hover:-translate-y-2 gradient-border tilt-effect animate-fadeIn border-gray-700/50`}
                 style={{
-                  boxShadow: isDark 
-                    ? '0 25px 50px -12px rgba(59, 130, 246, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
-                    : '0 25px 50px -12px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(0, 0, 0, 0.1)',
+                  boxShadow: '0 25px 50px -12px rgba(59, 130, 246, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
                   animationDelay: `${index * 100}ms`
                 }}
               >
@@ -288,40 +268,40 @@ const CareerPath = () => {
                   boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
                   transform: 'perspective(1000px) rotateY(-10deg) rotateX(5deg)'
                 }}>
-                  <div className={`absolute inset-0 rounded-2xl animate-pulse ${isDark ? 'bg-white/10' : 'bg-white/20'}`}></div>
+                  <div className={`absolute inset-0 rounded-2xl animate-pulse bg-white/10`}></div>
                   <div className="relative z-10 group-hover:animate-bounce">
                     {career.icon}
                   </div>
                 </div>
                 
-                <h3 className={`text-2xl font-extrabold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <h3 className={`text-2xl font-extrabold mb-4 text-white`}>
                   {careerName}
                 </h3>
                 
-                <p className={`text-base leading-relaxed mb-6 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                <p className={`text-base leading-relaxed mb-6 text-gray-300`}>
                   {career.description}
                 </p>
                 
                 {/* Key Stats with Enhanced Design */}
                 <div className="space-y-3 mb-6">
-                  <div className={`flex justify-between items-center p-3 rounded-xl ${isDark ? 'bg-gray-900/50' : 'bg-white/20'}`}>
-                    <span className={`text-sm font-bold ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <div className={`flex justify-between items-center p-3 rounded-xl bg-gray-900/50`}>
+                    <span className={`text-sm font-bold text-gray-400`}>
                       Salary Range
                     </span>
                     <span className={`text-sm font-extrabold bg-gradient-to-r from-green-500 to-emerald-500 bg-clip-text text-transparent`}>
                       {career.averageSalary}
                     </span>
                   </div>
-                  <div className={`flex justify-between items-center p-3 rounded-xl ${isDark ? 'bg-gray-900/50' : 'bg-white/20'}`}>
-                    <span className={`text-sm font-bold ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <div className={`flex justify-between items-center p-3 rounded-xl bg-gray-900/50`}>
+                    <span className={`text-sm font-bold text-gray-400`}>
                       Growth Rate
                     </span>
                     <span className={`text-sm font-extrabold bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent`}>
                       {career.growthRate}
                     </span>
                   </div>
-                  <div className={`flex justify-between items-center p-3 rounded-xl ${isDark ? 'bg-gray-900/50' : 'bg-white/20'}`}>
-                    <span className={`text-sm font-bold ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <div className={`flex justify-between items-center p-3 rounded-xl bg-gray-900/50`}>
+                    <span className={`text-sm font-bold text-gray-400`}>
                       Demand
                     </span>
                     <span className={`text-sm font-extrabold ${
@@ -337,7 +317,7 @@ const CareerPath = () => {
                 {/* Trending Badge for Popular Careers */}
                 {career.trending && (
                   <div className="absolute top-4 left-4">
-                    <span className={`px-3 py-1.5 rounded-full text-xs font-extrabold animate-pulse ${isDark ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white' : 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white'}`}>
+                    <span className={`px-3 py-1.5 rounded-full text-xs font-extrabold animate-pulse bg-gradient-to-r from-yellow-500 to-orange-500 text-white`}>
                       🔥 Trending
                     </span>
                   </div>
@@ -347,7 +327,7 @@ const CareerPath = () => {
                 <div className="opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-500">
                   <div className={`w-full h-1.5 rounded-full bg-gradient-to-r ${career.gradient} mb-4 animate-pulse`}></div>
                   <div className="text-center">
-                    <span className={`text-sm font-extrabold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    <span className={`text-sm font-extrabold text-white`}>
                       Click to explore this path →
                     </span>
                   </div>
@@ -363,12 +343,12 @@ const CareerPath = () => {
 
           {/* Selected Career Details */}
           {selectedCareer && !isLoading && (
-            <div id="career-details-section" className={`mb-20 p-10 rounded-3xl backdrop-blur-xl border transition-all duration-1000 animate-fadeIn gradient-border ${isDark ? 'border-gray-700/50' : 'border-gray-200/50'}`}>
+            <div id="career-details-section" className={`mb-20 p-10 rounded-3xl backdrop-blur-xl border transition-all duration-1000 animate-fadeIn gradient-border border-gray-700/50`}>
               <div className="text-center mb-12">
-                <h2 className={`text-4xl font-black mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <h2 className={`text-4xl font-black mb-6 text-white`}>
                   Your Journey in {selectedCareer}
                 </h2>
-                <p className={`text-xl ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                <p className={`text-xl text-gray-300`}>
                   Everything you need to know about this career path
                 </p>
               </div>
@@ -378,7 +358,7 @@ const CareerPath = () => {
                 <div className="space-y-10">
                   {/* Specializations */}
                   <div>
-                    <h3 className={`text-2xl font-extrabold mb-8 flex items-center ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    <h3 className={`text-2xl font-extrabold mb-8 flex items-center text-white`}>
                       <svg className="w-7 h-7 mr-3" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                       </svg>
@@ -386,22 +366,22 @@ const CareerPath = () => {
                     </h3>
                     <div className="grid gap-5">
                       {careerPaths[selectedCareer].specializations.map((spec, index) => (
-                        <div key={index} className={`p-6 rounded-2xl border transition-all duration-300 hover:scale-[1.02] gradient-border ${isDark ? 'border-gray-700/50' : 'border-gray-200/50'}`}>
+                        <div key={index} className={`p-6 rounded-2xl border transition-all duration-300 hover:scale-[1.02] gradient-border border-gray-700/50`}>
                           <div className="flex justify-between items-start mb-4">
-                            <h4 className={`font-extrabold text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            <h4 className={`font-extrabold text-lg text-white`}>
                               {spec.name}
                             </h4>
                             <span className={`text-xs px-3 py-2 rounded-full font-bold ${
                               spec.difficulty === 'Expert' 
-                                ? (isDark ? 'bg-red-900/50 text-red-200' : 'bg-red-100/50 text-red-800') :
+                                ? ('bg-red-900/50 text-red-200' ) :
                               spec.difficulty === 'Advanced' 
-                                ? (isDark ? 'bg-orange-900/50 text-orange-200' : 'bg-orange-100/50 text-orange-800') :
-                                (isDark ? 'bg-green-900/50 text-green-200' : 'bg-green-100/50 text-green-800')
+                                ? ('bg-orange-900/50 text-orange-200' ) :
+                                ('bg-green-900/50 text-green-200' )
                             }`}>
                               {spec.difficulty}
                             </span>
                           </div>
-                          <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                          <p className={`text-sm text-gray-400`}>
                             Time to Master: {spec.timeToMaster}
                           </p>
                         </div>
@@ -411,7 +391,7 @@ const CareerPath = () => {
 
                   {/* Key Skills */}
                   <div>
-                    <h3 className={`text-2xl font-extrabold mb-8 flex items-center ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    <h3 className={`text-2xl font-extrabold mb-8 flex items-center text-white`}>
                       <svg className="w-7 h-7 mr-3" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
@@ -419,7 +399,7 @@ const CareerPath = () => {
                     </h3>
                     <div className="flex flex-wrap gap-4">
                       {careerPaths[selectedCareer].skills.map((skill, index) => (
-                        <span key={index} className={`px-6 py-3 rounded-2xl text-sm font-extrabold transition-all duration-300 hover:scale-110 gradient-border ${isDark ? 'border-blue-500/40' : 'border-blue-200/50'}`}>
+                        <span key={index} className={`px-6 py-3 rounded-2xl text-sm font-extrabold transition-all duration-300 hover:scale-110 gradient-border border-blue-500/40`}>
                           {skill}
                         </span>
                       ))}
@@ -431,7 +411,7 @@ const CareerPath = () => {
                 <div className="space-y-10">
                   {/* Top Companies */}
                   <div>
-                    <h3 className={`text-2xl font-extrabold mb-8 flex items-center ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    <h3 className={`text-2xl font-extrabold mb-8 flex items-center text-white`}>
                       <svg className="w-7 h-7 mr-3" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                       </svg>
@@ -439,8 +419,8 @@ const CareerPath = () => {
                     </h3>
                     <div className="grid grid-cols-2 gap-5">
                       {careerPaths[selectedCareer].companies.map((company, index) => (
-                        <div key={index} className={`p-5 rounded-2xl text-center transition-all duration-300 hover:scale-[1.03] gradient-border ${isDark ? 'border-blue-500/35' : 'border-blue-200/50'}`}>
-                          <span className={`font-extrabold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                        <div key={index} className={`p-5 rounded-2xl text-center transition-all duration-300 hover:scale-[1.03] gradient-border border-blue-500/35`}>
+                          <span className={`font-extrabold text-white`}>
                             {company}
                           </span>
                         </div>
@@ -450,7 +430,7 @@ const CareerPath = () => {
 
                   {/* Day in Life */}
                   <div>
-                    <h3 className={`text-2xl font-extrabold mb-8 flex items-center ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    <h3 className={`text-2xl font-extrabold mb-8 flex items-center text-white`}>
                       <svg className="w-7 h-7 mr-3" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm4.2 14.2L11 13V7h1.5v5.2l4.5 2.7-.8 1.3z" />
                       </svg>
@@ -458,9 +438,9 @@ const CareerPath = () => {
                     </h3>
                     <div className="space-y-5">
                       {careerPaths[selectedCareer].dayInLife.map((activity, index) => (
-                        <div key={index} className={`flex items-start p-5 rounded-2xl transition-all duration-300 hover:scale-[1.01] gradient-border ${isDark ? 'border-gray-700/50' : 'border-gray-200/50'}`}>
+                        <div key={index} className={`flex items-start p-5 rounded-2xl transition-all duration-300 hover:scale-[1.01] gradient-border border-gray-700/50`}>
                           <div className={`w-3 h-3 rounded-full mt-3 mr-5 flex-shrink-0 bg-gradient-to-r ${careerPaths[selectedCareer].gradient}`}></div>
-                          <span className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                          <span className={`text-sm text-gray-300`}>
                             {activity}
                           </span>
                         </div>

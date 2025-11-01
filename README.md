@@ -1,17 +1,17 @@
-# 🚀 TourGuide - AI-Powered Career Guidance Platform
+# 🧭 Student Compass - AI-Powered Career Guidance Platform
 
-A comprehensive career guidance platform that uses **Google Gemini AI** to provide personalized career mentorship, roadmap planning, and skill development guidance.
+A modern, interactive career guidance platform that provides personalized career mentorship, roadmap planning, and skill development guidance. Built with cutting-edge AI integration and a sleek, responsive interface.
 
 ![Career Guidance Platform](https://img.shields.io/badge/AI-Powered-blue) ![FastAPI](https://img.shields.io/badge/FastAPI-Backend-green) ![React](https://img.shields.io/badge/React-Frontend-blue) ![Google Gemini](https://img.shields.io/badge/Google-Gemini_AI-orange)
 
 ## ✨ Features
 
-### 🤖 **AI-Powered Career Mentor**
-- **Personalized Roadmaps**: Get custom career paths based on your current skills and goals
-- **Context-Aware Guidance**: AI remembers your background and provides tailored advice
-- **Actionable Steps**: Receive specific, time-bound action plans (weekly/monthly milestones)
-- **Interactive Chat**: Real-time conversation with your personal career assistant
-- **Friendly AI Guide**: Conversational AI that acts like a supportive mentor with encouraging language
+### 🤖 **AI-Powered Career Discovery**
+- **Personalized Roadmaps**: Get custom career paths based on your skills and goals
+- **Smart Career Analysis**: Comprehensive skill assessment and path recommendations
+- **Actionable Steps**: Receive specific, time-bound learning plans with milestones
+- **Interactive Search**: Google-like search with live recommendations
+- **Resource Integration**: YouTube videos, books, certifications, and courses
 
 ### 🎯 **Core Capabilities**
 - **Career Analysis**: Comprehensive skill assessment and career path recommendations
@@ -22,24 +22,27 @@ A comprehensive career guidance platform that uses **Google Gemini AI** to provi
 - **Educational Resources**: YouTube videos and Google Books recommendations
 
 ### 🛠️ **Technology Stack**
-- **Backend**: FastAPI (Python 3.13)
-- **Frontend**: React with Tailwind CSS
-- **AI Integration**: Google Gemini API
-- **Authentication**: JWT-based user management
-- **Database**: Mock user service (easily extensible to real databases)
+- **Backend**: FastAPI (Python) with Uvicorn
+- **Frontend**: React 18 with Tailwind CSS
+- **AI Integration**: Google Gemini AI & Vertex AI
+- **UI/UX**: Framer Motion, Three.js, GSAP animations
+- **Design**: Glassmorphism, 3D effects, smooth transitions
+- **APIs**: Google Books, YouTube Data API v3
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.13+
+- Python 3.9+
 - Node.js 16+
+- npm or yarn
 - Google Gemini API Key
+- YouTube Data API Key (optional but recommended)
 - Google Books API Key (optional but recommended)
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/ai-career-guidance.git
-cd ai-career-guidance
+git clone https://github.com/yourusername/student-compass.git
+cd student-compass
 ```
 
 ### 2. Backend Setup
@@ -47,22 +50,24 @@ cd ai-career-guidance
 # Navigate to backend directory
 cd Generative
 
-# Create virtual environment
-python -m venv ../.venv
+# Create virtual environment (recommended)
+python -m venv .venv
 
 # Activate virtual environment
 # On Windows:
-..\.venv\Scripts\activate
+.venv\Scripts\activate
 # On macOS/Linux:
-source ../.venv/bin/activate
+source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
 
 # Set up environment variables
 # Create .env file and add your API keys:
-echo "GOOGLE_GENAI_API_KEY=your_gemini_api_key_here" > .env
-echo "REACT_APP_GOOGLE_BOOKS_API_KEY=your_google_books_api_key_here" >> .env
+cp env.example .env
+# Edit .env and add your keys:
+# GOOGLE_GENAI_API_KEY=your_gemini_api_key_here
+# REACT_APP_GOOGLE_BOOKS_API_KEY=your_google_books_api_key_here
 
 # Run the backend server
 python main.py
@@ -121,10 +126,10 @@ What's my learning roadmap?"
 ## 🔧 API Endpoints
 
 ### Core Endpoints
-- `POST /chat/` - Interactive career guidance chat
-- `POST /analyze` - Comprehensive career analysis
+- `POST /analyze` - Comprehensive career analysis and roadmap generation
 - `POST /mock-test` - Generate personalized skill assessments
 - `GET /health` - Service health check
+- `POST /ai-search` - AI-powered search and recommendations
 
 ### Authentication
 - `POST /auth/register` - User registration
@@ -160,116 +165,111 @@ REACT_APP_GOOGLE_BOOKS_API_KEY=your_google_books_api_key
 ├── Generative/                 # Backend (FastAPI)
 │   ├── main.py                # Application entry point
 │   ├── routes/                # API route handlers
+│   │   ├── analyze.py        # Career analysis endpoint
 │   │   ├── auth.py           # Authentication endpoints
-│   │   ├── chat.py           # Career guidance chat
-│   │   └── career.py         # Career analysis endpoints
+│   │   ├── ai_search.py      # AI search functionality
+│   │   ├── mock_test.py      # Mock test generation
+│   │   └── health.py         # Health check
 │   ├── services/              # Business logic
 │   │   ├── ai_service.py     # Google Gemini AI integration
 │   │   ├── auth_service.py   # Authentication logic
-│   │   └── mock_user_service.py # User management
-│   ├── models/                # Data models
+│   │   └── user_service.py   # User management
+│   ├── models/                # Pydantic data models
+│   ├── tests/                 # Test suite
 │   └── dependencies.py       # FastAPI dependencies
 │
-├── frontend/                   # React Frontend
+├── Generative/frontend/        # React Frontend
 │   ├── src/
-│   │   ├── components/       # React components
-│   │   │   ├── ChatBot.js   # AI chat interface
-│   │   │   ├── Dashboard.js # Main dashboard
-│   │   │   └── Auth/        # Authentication components
-│   │   ├── services/        # API communication
-│   │   └── context/         # React context
-│   └── public/              # Static assets
+│   │   ├── pages/            # Main pages
+│   │   │   ├── Landing.js    # Home page with career selection
+│   │   │   ├── UltimateRoadmap.js  # Learning roadmap
+│   │   │   ├── Flowchart.js  # Visual flowchart
+│   │   │   └── CareerPath.js # Career exploration
+│   │   ├── components/       # Reusable components
+│   │   │   ├── Navbar.js     # Navigation bar
+│   │   │   ├── SearchBar.js  # Smart search component
+│   │   │   └── LoadingSpinner.js
+│   │   ├── constants/        # Data constants
+│   │   ├── context/          # React context providers
+│   │   └── services/         # API communication
+│   └── public/               # Static assets
 │
 └── .env                       # Environment variables
 ```
 
 ## 🎨 Features Showcase
 
-### 💬 **Interactive Chat Interface**
-- Real-time typing indicators
-- Message history
-- Quick action buttons
-- Skill extraction notifications
-- Friendly, encouraging AI responses
+### 🏠 **Smart Landing Page**
+- Category-based career selection (Engineering, Medical, Commerce, etc.)
+- Field and specialization browsing
+- Quick domain selection for popular paths
+- Beautiful animated interface
 
-### 📊 **Career Analysis Dashboard**
-- Comprehensive skill assessment
-- Multiple career path suggestions
-- Salary range information (INR/USD)
-- Growth prospect indicators
-- Medical specialization options
+### 📊 **Interactive Career Discovery**
+- Comprehensive career cards with salary data
+- Growth projections and demand levels
+- Specialization breakdowns
+- Company hiring insights
+- Day-in-life descriptions
 
-### 🎯 **Personalized Learning Paths**
-- Custom roadmaps based on experience level
-- Specific resource recommendations (videos and books)
-- Timeline-based milestones
-- Progress tracking capabilities
+### 🎯 **Personalized Learning Roadmaps**
+- Step-by-step learning paths
+- Duration estimates and difficulty levels
+- Key activities and skill gains
+- Resource recommendations
 
-### 📚 **Educational Resources**
-- YouTube video recommendations based on your skills
-- Google Books recommendations for deeper learning
-- Curated courses and tutorials
-- Interactive flowcharts for visual learning
+### 📚 **Rich Educational Resources**
+- YouTube video recommendations
+- Google Books integration
+- Certification listings
+- Online course suggestions
+- Real-time resource fetching
 
-## 🔄 **Beginner's Guide to Using the Platform**
+## 🔄 **Quick Start Guide**
 
-### Step 1: Getting Started
-1. Open the application in your browser (http://localhost:3000)
-2. You'll see a friendly welcome screen with options to select your career category
+### Step 1: Explore Careers
+1. Open the application (http://localhost:3000)
+2. Browse categories: Engineering, Medical, Commerce, Design, etc.
+3. Select a field and specialization that interests you
 
-### Step 2: Choose Your Path
-1. Select between **Engineering** or **Medical** fields
-2. Choose your specific field (e.g., Software Engineering, Pediatrics)
-3. Pick a specialization (e.g., Web Development, Child Psychology)
+### Step 2: Get Your Roadmap
+1. Choose your path or use the search bar
+2. View personalized learning roadmap
+3. Each step shows:
+   - Clear objectives
+   - Duration estimates
+   - Skills you'll gain
 
-### Step 3: Explore Your Roadmap
-1. After selecting your path, you'll see a personalized learning roadmap
-2. Each step includes:
-   - Clear learning objectives
-   - Estimated time to complete
-   - Recommended resources (videos and books)
+### Step 3: Discover Resources
+1. Click YouTube Videos for curated tutorials
+2. Browse Books for deeper learning
+3. Check Certifications for credentials
+4. Explore Online Courses for structured learning
 
-### Step 4: Access Learning Resources
-1. Click "Find Videos" to get YouTube recommendations
-2. Click "Find Books" to get book recommendations
-3. All resources are tailored to your selected skills
+### Step 4: Track Progress
+1. Use Flowchart for visual roadmap
+2. Mark completed steps
+3. Navigate between pages seamlessly
 
-### Step 5: Chat with Your AI Mentor
-1. Use the chat icon in the bottom right to talk to your AI mentor
-2. Ask questions about your career path, learning resources, or next steps
-3. Get personalized advice and encouragement
+## 🎨 **Modern UI/UX Design**
 
-### Step 6: Visualize Your Progress
-1. Visit the Flowchart page to see a visual representation of your learning path
-2. Track your progress through each step
-3. Adjust your path as needed based on your interests
+### 🌈 **Beautiful Visual Effects**
+- Gradient text animations
+- 3D card effects with depth
+- Smooth hover transitions
+- Glassmorphism styling
 
-## 🎨 **Enhanced Visual Design Features**
+### ⚡ **High Performance**
+- Hardware-accelerated animations
+- Smooth 60fps interactions
+- Responsive design
+- Fast page loads
 
-### 🌈 **Futuristic 3D Visuals**
-- Sophisticated 3D text effects with gradient animations
-- Interactive elements with depth perception
-- Smooth hover animations and transitions
-
-### 🪟 **Glassmorphism Design**
-- Modern frosted glass effects with backdrop blur
-- Theme-adaptive transparency for depth
-- Consistent styling across all components
-
-### 🌟 **Glow Accents**
-- Interactive glow effects on buttons and cards
-- Animated pulse effects for visual interest
-- Consistent blue-themed glow for brand identity
-
-### 🎞️ **Smooth Animations**
-- Hardware-accelerated 60fps animations
-- Staggered entrance effects for visual hierarchy
-- Smooth transitions between UI states
-
-### 🌓 **Light/Dark Theme Support**
-- Full theme compatibility for both light and dark modes
-- Theme-specific color schemes and styling
-- Proper contrast ratios for accessibility
+### 🎯 **Clean Interface**
+- Minimalistic layout
+- Intuitive navigation
+- Consistent styling
+- Dark mode optimized
 
 ## 🔒 Security Features
 
@@ -307,4 +307,4 @@ For support and questions:
 
 ---
 
-**Made with ❤️ using Google Gemini AI, FastAPI, and React**
+**Made with ❤️ using Google Gemini AI, FastAPI, React, and modern web technologies**

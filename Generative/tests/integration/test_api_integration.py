@@ -229,22 +229,11 @@ class TestAPIIntegration:
         assert question["correct_answer"] in ["A", "B", "C", "D"]
         assert question["difficulty"] in ["easy", "intermediate", "hard"]
     
-    @pytest.mark.integration
-    @pytest.mark.asyncio
-    async def test_chat_endpoint_workflow(self, async_client, mock_ai_service):
-        """Test chat endpoint workflow"""
-        chat_request = {
-            "message": "What are the career prospects for a Python developer?",
-            "context": "The user is interested in Python development and wants to know about career opportunities."
-        }
-        
-        response = await async_client.post("/chat", json=chat_request)
-        assert response.status_code == 200
-        
-        chat_data = response.json()
-        assert "response" in chat_data
-        assert isinstance(chat_data["response"], str)
-        assert len(chat_data["response"]) > 0
+    # @pytest.mark.integration
+    # @pytest.mark.asyncio
+    # async def test_chat_endpoint_workflow(self, async_client, mock_ai_service):
+    #     """Test chat endpoint workflow - DISABLED: Chat system removed"""
+    #     pass
     
     @pytest.mark.integration
     @pytest.mark.asyncio

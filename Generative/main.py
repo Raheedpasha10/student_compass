@@ -7,7 +7,7 @@ import os
 load_dotenv()
 
 from config.settings import settings
-from routes import analyze, health, mock_test, auth, chat, update_skills, ai_search
+from routes import analyze, health, mock_test, auth, update_skills, ai_search
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -30,7 +30,6 @@ app.include_router(auth.router)
 app.include_router(health.router)
 app.include_router(analyze.router)
 app.include_router(mock_test.router)
-app.include_router(chat.router)
 app.include_router(update_skills.router)
 app.include_router(ai_search.router)
 

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from '../context/ThemeContext';
 import { careerAPI } from '../services/api';
 
 const Flowchart = () => {
@@ -13,8 +12,6 @@ const Flowchart = () => {
   
   const navigate = useNavigate();
   const { currentSkills, currentExpertise } = useAppContext();
-  const { isDark } = useTheme();
-
   // Fetch roadmap data from your API
   useEffect(() => {
     const fetchRoadmapData = async () => {
@@ -171,27 +168,20 @@ const Flowchart = () => {
 
   if (loading) {
     return (
-      <div className={`min-h-screen pt-24 professional-background relative overflow-hidden ${isDark ? 'dark' : 'light'}`}>
+      <div className="min-h-screen pt-20 professional-background relative overflow-hidden dark">
         {/* Enhanced Background Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className={`absolute top-20 left-20 w-64 h-64 rounded-full opacity-20 animate-pulseGlow blur-3xl ${isDark ? 'bg-gradient-to-r from-blue-500/40 to-indigo-500/40' : 'bg-gradient-to-r from-blue-400/30 to-indigo-400/30'} animate-float`}></div>
-          <div className={`absolute bottom-20 right-20 w-48 h-48 rounded-full opacity-15 animate-drift blur-2xl ${isDark ? 'bg-gradient-to-r from-purple-500/40 to-blue-500/40' : 'bg-gradient-to-r from-purple-400/30 to-blue-400/30'}`}></div>
-          
-          {/* Subtle particle effects */}
-          <div className={`absolute top-1/3 left-1/3 w-2 h-2 rounded-full animate-float ${isDark ? 'bg-blue-400' : 'bg-blue-500'}`} style={{animationDuration: '9s', marginLeft: '-1px', marginTop: '-1px'}}></div>
-          <div className={`absolute bottom-1/4 right-1/4 w-1.5 h-1.5 rounded-full animate-drift ${isDark ? 'bg-indigo-400' : 'bg-indigo-500'}`} style={{animationDuration: '11s', marginLeft: '-0.75px', marginTop: '-0.75px'}}></div>
-          <div className={`absolute top-2/3 left-1/5 w-2.5 h-2.5 rounded-full animate-driftDelayed ${isDark ? 'bg-purple-400' : 'bg-purple-500'}`} style={{animationDuration: '13s', marginLeft: '-1.25px', marginTop: '-1.25px'}}></div>
         </div>
         
         <div className="relative z-10 flex items-center justify-center min-h-screen">
           <div className="text-center p-8 rounded-3xl backdrop-blur-xl border animate-pulse gradient-border">
             <div className="flex justify-center mb-6">
-              <div className={`w-16 h-16 rounded-full border-4 ${isDark ? 'border-blue-500 border-t-transparent' : 'border-blue-400 border-t-transparent'} animate-spin`}></div>
+              <div className={`w-16 h-16 rounded-full border-4 border-blue-500 border-t-transparent animate-spin`}></div>
             </div>
-            <h2 className={`text-2xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            <h2 className={`text-2xl font-bold mb-2 text-white`}>
               Generating Your Flowchart
             </h2>
-            <p className={isDark ? 'text-gray-300' : 'text-gray-600'}>
+            <p className="text-gray-300">
               Creating a personalized learning path for <span className="font-semibold">{currentSkills || 'your selected domain'}</span>...
             </p>
           </div>
@@ -202,22 +192,22 @@ const Flowchart = () => {
 
   if (error) {
     return (
-      <div className={`min-h-screen pt-24 professional-background relative overflow-hidden ${isDark ? 'dark' : 'light'}`}>
+      <div className="min-h-screen pt-20 professional-background relative overflow-hidden dark">
         {/* Enhanced Background Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className={`absolute top-20 left-20 w-64 h-64 rounded-full opacity-20 animate-pulseGlow blur-3xl ${isDark ? 'bg-gradient-to-r from-blue-500/40 to-indigo-500/40' : 'bg-gradient-to-r from-blue-400/30 to-indigo-400/30'} animate-float`}></div>
-          <div className={`absolute bottom-20 right-20 w-48 h-48 rounded-full opacity-15 animate-drift blur-2xl ${isDark ? 'bg-gradient-to-r from-purple-500/40 to-blue-500/40' : 'bg-gradient-to-r from-purple-400/30 to-blue-400/30'}`}></div>
+          <div className={`absolute top-20 left-20 w-64 h-64 rounded-full opacity-20 animate-pulseGlow blur-3xl bg-gradient-to-r from-blue-500/40 to-indigo-500/40 animate-float`}></div>
+          <div className={`absolute bottom-20 right-20 w-48 h-48 rounded-full opacity-15 animate-drift blur-2xl bg-gradient-to-r from-purple-500/40 to-blue-500/40`}></div>
         </div>
         
         <div className="relative z-10 max-w-6xl mx-auto px-6 py-12">
           <div className="text-center p-10 rounded-3xl backdrop-blur-xl border gradient-border">
             <div className="mb-6">
-              <i className={`fas fa-exclamation-triangle text-5xl ${isDark ? 'text-yellow-400' : 'text-yellow-500'}`}></i>
+              <i className={`fas fa-exclamation-triangle text-5xl text-yellow-400`}></i>
             </div>
-            <h1 className={`text-3xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            <h1 className={`text-3xl font-bold mb-4 text-white`}>
               Error Loading Flowchart
             </h1>
-            <p className={`text-xl mb-8 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+            <p className={`text-xl mb-8 text-gray-300`}>
               {error}
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
@@ -243,16 +233,16 @@ const Flowchart = () => {
   }
 
   return (
-    <div className={`min-h-screen pt-24 professional-background relative overflow-hidden ${isDark ? 'dark' : 'light'}`}>
+    <div className={`min-h-screen pt-24 professional-background relative overflow-hidden dark`}>
       {/* Enhanced Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className={`absolute top-20 left-20 w-64 h-64 rounded-full opacity-20 animate-pulseGlow blur-3xl ${isDark ? 'bg-gradient-to-r from-blue-500/40 to-indigo-500/40' : 'bg-gradient-to-r from-blue-400/30 to-indigo-400/30'} animate-float`}></div>
-        <div className={`absolute bottom-20 right-20 w-48 h-48 rounded-full opacity-15 animate-drift blur-2xl ${isDark ? 'bg-gradient-to-r from-purple-500/40 to-blue-500/40' : 'bg-gradient-to-r from-purple-400/30 to-blue-400/30'}`}></div>
+        <div className={`absolute top-20 left-20 w-64 h-64 rounded-full opacity-20 animate-pulseGlow blur-3xl bg-gradient-to-r from-blue-500/40 to-indigo-500/40 animate-float`}></div>
+        <div className={`absolute bottom-20 right-20 w-48 h-48 rounded-full opacity-15 animate-drift blur-2xl bg-gradient-to-r from-purple-500/40 to-blue-500/40`}></div>
         
         {/* Subtle particle effects */}
-        <div className={`absolute top-1/3 left-1/3 w-2 h-2 rounded-full animate-float ${isDark ? 'bg-blue-400' : 'bg-blue-500'}`} style={{animationDuration: '9s', marginLeft: '-1px', marginTop: '-1px'}}></div>
-        <div className={`absolute bottom-1/4 right-1/4 w-1.5 h-1.5 rounded-full animate-drift ${isDark ? 'bg-indigo-400' : 'bg-indigo-500'}`} style={{animationDuration: '11s', marginLeft: '-0.75px', marginTop: '-0.75px'}}></div>
-        <div className={`absolute top-2/3 left-1/5 w-2.5 h-2.5 rounded-full animate-driftDelayed ${isDark ? 'bg-purple-400' : 'bg-purple-500'}`} style={{animationDuration: '13s', marginLeft: '-1.25px', marginTop: '-1.25px'}}></div>
+        <div className={`absolute top-1/3 left-1/3 w-2 h-2 rounded-full animate-float bg-blue-400`} style={{animationDuration: '9s', marginLeft: '-1px', marginTop: '-1px'}}></div>
+        <div className={`absolute bottom-1/4 right-1/4 w-1.5 h-1.5 rounded-full animate-drift bg-indigo-400`} style={{animationDuration: '11s', marginLeft: '-0.75px', marginTop: '-0.75px'}}></div>
+        <div className={`absolute top-2/3 left-1/5 w-2.5 h-2.5 rounded-full animate-driftDelayed bg-purple-400`} style={{animationDuration: '13s', marginLeft: '-1.25px', marginTop: '-1.25px'}}></div>
       </div>
       
       {/* Celebration Animation */}
@@ -260,7 +250,7 @@ const Flowchart = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
           <div className="text-center animate-bounce">
             <div className="text-6xl mb-4">🎉</div>
-            <div className={`text-3xl font-bold px-6 py-3 rounded-full backdrop-blur-xl ${isDark ? 'bg-green-900/50 text-green-200' : 'bg-green-100/50 text-green-800'}`}>
+            <div className={`text-3xl font-bold px-6 py-3 rounded-full backdrop-blur-xl bg-green-900/50 text-green-200`}>
               Congratulations!
             </div>
           </div>
@@ -269,10 +259,10 @@ const Flowchart = () => {
       
       <div className="relative z-10 max-w-6xl mx-auto px-6 py-12">
         <div className="text-center mb-12">
-          <h1 className={`text-4xl md:text-5xl font-black mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          <h1 className={`text-4xl md:text-5xl font-black mb-6 text-white`}>
             Your Learning Flowchart
           </h1>
-          <p className={`text-xl max-w-3xl mx-auto mb-8 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+          <p className={`text-xl max-w-3xl mx-auto mb-8 text-gray-300`}>
             Visual roadmap for <span className="font-bold gradient-text">{currentSkills || 'your selected domain'}</span>
           </p>
         </div>
@@ -281,7 +271,7 @@ const Flowchart = () => {
           <div className="mb-12">
             {/* Achievement Badge */}
             {getAchievementBadge() && (
-              <div className={`mb-6 p-4 rounded-2xl backdrop-blur-xl border text-center animate-pulse ${isDark ? 'bg-gray-800/50 border-gray-700/50' : 'bg-white/50 border-gray-200/50'}`}>
+              <div className={`mb-6 p-4 rounded-2xl backdrop-blur-xl border text-center animate-pulse bg-gray-800/50 border-gray-700/50`}>
                 <i className={`${getAchievementBadge().icon} text-2xl mr-2 ${
                   getAchievementBadge().color === 'blue' ? 'text-blue-500' :
                   getAchievementBadge().color === 'green' ? 'text-green-500' :
@@ -290,7 +280,7 @@ const Flowchart = () => {
                   getAchievementBadge().color === 'purple' ? 'text-purple-500' : 'text-gray-500'
                 }`}></i>
                 <span className={`font-bold ${
-                  isDark ? 'text-white' : 'text-gray-900'
+                  'text-white'
                 }`}>
                   Achievement Unlocked: {getAchievementBadge().text}
                 </span>
@@ -298,26 +288,26 @@ const Flowchart = () => {
             )}
             
             {/* Motivational Message */}
-            <div className={`mb-6 p-4 rounded-2xl backdrop-blur-xl border ${isDark ? 'bg-gray-800/50 border-gray-700/50' : 'bg-white/50 border-gray-200/50'}`}>
-              <p className={`text-center font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+            <div className={`mb-6 p-4 rounded-2xl backdrop-blur-xl border bg-gray-800/50 border-gray-700/50`}>
+              <p className={`text-center font-medium text-gray-200`}>
                 <i className="fas fa-lightbulb mr-2 text-yellow-500"></i>
                 {getProgressMessage()}
               </p>
             </div>
             
-            <div className={`p-8 rounded-3xl backdrop-blur-xl border mb-8 gradient-border ${isDark ? 'border-gray-700/50' : 'border-gray-200/50'}`}>
+            <div className={`p-8 rounded-3xl backdrop-blur-xl border mb-8 gradient-border border-gray-700/50`}>
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
                 <div>
-                  <h2 className={`text-2xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  <h2 className={`text-2xl font-bold mb-2 text-white`}>
                     Learning Path Overview
                   </h2>
-                  <p className={isDark ? 'text-gray-300' : 'text-gray-600'}>
+                  <p className={'text-gray-300'}>
                     Follow this structured approach to master your chosen field
                   </p>
                 </div>
                 <button
                   onClick={resetProgress}
-                  className={`px-4 py-2 rounded-xl font-bold transition-all duration-300 hover:scale-105 mt-4 md:mt-0 ${isDark ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-900 hover:bg-gray-300'}`}
+                  className={`px-4 py-2 rounded-xl font-bold transition-all duration-300 hover:scale-105 mt-4 md:mt-0 bg-gray-700 text-white hover:bg-gray-600`}
                 >
                   <i className="fas fa-redo mr-2"></i>
                   Reset Progress
@@ -327,7 +317,7 @@ const Flowchart = () => {
               {/* Flowchart Visualization */}
               <div className="relative">
                 {/* Connection lines */}
-                <div className={`absolute left-8 top-0 bottom-0 w-1 bg-gradient-to-b ${isDark ? 'from-blue-500 to-indigo-500' : 'from-blue-400 to-indigo-400'} transform -translate-x-1/2`}></div>
+                <div className={`absolute left-8 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-indigo-500 transform -translate-x-1/2`}></div>
                 
                 <div className="space-y-8 pl-16">
                   {(roadmapData.roadmap || []).map((step, index) => {
@@ -342,7 +332,7 @@ const Flowchart = () => {
                           isCompleted 
                             ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
                             : isLocked
-                              ? (isDark ? 'bg-gray-600' : 'bg-gray-400')
+                              ? ('bg-gray-600')
                               : 'bg-gradient-to-r from-blue-500 to-indigo-500'
                         }`}>
                           {isCompleted ? (
@@ -358,16 +348,10 @@ const Flowchart = () => {
                         <div 
                           className={`p-6 rounded-2xl backdrop-blur-xl border transition-all duration-300 hover:scale-[1.02] gradient-border tilt-effect ${
                             isCompleted 
-                              ? (isDark 
-                                  ? 'border-green-500/30' 
-                                  : 'border-green-200/50')
+                              ? ('border-green-500/30')
                               : isLocked
-                                ? (isDark 
-                                    ? 'border-gray-700/30 opacity-60 cursor-not-allowed' 
-                                    : 'border-gray-200/30 opacity-70 cursor-not-allowed')
-                                : (isDark 
-                                    ? 'border-gray-700/50 cursor-pointer' 
-                                    : 'border-gray-200/50 cursor-pointer')
+                                ? ('border-gray-700/30 opacity-60 cursor-not-allowed')
+                                : ('border-gray-700/50 cursor-pointer')
                           }`}
                           onClick={() => {
                             if (!isLocked) {
@@ -376,21 +360,21 @@ const Flowchart = () => {
                           }}
                         >
                           <div className="flex justify-between items-start mb-4">
-                            <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            <h3 className={`text-xl font-bold text-white`}>
                               {step.title}
                               {isLocked && (
-                                <span className={`ml-2 text-sm px-2 py-1 rounded-full ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`}>
+                                <span className={`ml-2 text-sm px-2 py-1 rounded-full bg-gray-700 text-gray-300`}>
                                   <i className="fas fa-lock mr-1"></i>
                                   Locked
                                 </span>
                               )}
                             </h3>
-                            <div className={`px-3 py-1 rounded-full text-sm font-bold ${isDark ? 'bg-blue-900/50 text-blue-200' : 'bg-blue-100/50 text-blue-700'}`}>
+                            <div className={`px-3 py-1 rounded-full text-sm font-bold bg-blue-900/50 text-blue-200`}>
                               {step.duration}
                             </div>
                           </div>
                           
-                          <p className={`mb-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                          <p className={`mb-4 text-gray-300`}>
                             {step.description}
                           </p>
                           
@@ -398,26 +382,26 @@ const Flowchart = () => {
                             {(step.resources || []).slice(0, 3).map((resource, resourceIndex) => (
                               <span 
                                 key={resourceIndex}
-                                className={`px-3 py-1 rounded-full text-xs font-bold ${isDark ? 'bg-blue-900/40 text-blue-200' : 'bg-blue-100/50 text-blue-700'}`}
+                                className={`px-3 py-1 rounded-full text-xs font-bold bg-blue-900/40 text-blue-200`}
                               >
                                 {resource}
                               </span>
                             ))}
                             {(step.resources || []).length > 3 && (
-                              <span className={`px-3 py-1 rounded-full text-xs font-bold ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`}>
+                              <span className={`px-3 py-1 rounded-full text-xs font-bold bg-gray-700 text-gray-300`}>
                                 +{(step.resources || []).length - 3} more
                               </span>
                             )}
                           </div>
                           
                           <div className="flex justify-between items-center">
-                            <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                            <span className={`text-sm text-gray-400`}>
                               {isLocked 
                                 ? `Complete step ${index} to unlock` 
                                 : `Click to mark as ${isCompleted ? 'incomplete' : 'complete'}`}
                             </span>
                             {isCompleted && (
-                              <span className={`px-3 py-1 rounded-full text-xs font-bold ${isDark ? 'bg-green-900/50 text-green-200' : 'bg-green-100/50 text-green-800'}`}>
+                              <span className={`px-3 py-1 rounded-full text-xs font-bold bg-green-900/50 text-green-200`}>
                                 <i className="fas fa-check mr-1"></i>
                                 Completed
                               </span>
@@ -432,20 +416,20 @@ const Flowchart = () => {
             </div>
 
             {/* Progress Summary */}
-            <div className={`p-6 rounded-2xl backdrop-blur-xl border gradient-border ${isDark ? 'border-gray-700/50' : 'border-gray-200/50'}`}>
-              <h3 className={`text-xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            <div className={`p-6 rounded-2xl backdrop-blur-xl border gradient-border border-gray-700/50`}>
+              <h3 className={`text-xl font-bold mb-4 text-white`}>
                 Progress Summary
               </h3>
               <div className="flex items-center">
                 <div className="flex-1 mr-4">
-                  <div className={`w-full h-3 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                  <div className={`w-full h-3 rounded-full bg-gray-700`}>
                     <div 
                       className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"
                       style={{ width: `${roadmapData.roadmap && roadmapData.roadmap.length > 0 ? (completedSteps.size / roadmapData.roadmap.length) * 100 : 0}%` }}
                     ></div>
                   </div>
                 </div>
-                <span className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <span className={`font-bold text-white`}>
                   {completedSteps.size} of {roadmapData.roadmap ? roadmapData.roadmap.length : 0} steps completed
                 </span>
               </div>
@@ -457,12 +441,12 @@ const Flowchart = () => {
         {!roadmapData && !loading && !error && (
           <div className="text-center p-10 rounded-3xl backdrop-blur-xl border gradient-border">
             <div className="mb-6">
-              <i className={`fas fa-info-circle text-5xl ${isDark ? 'text-blue-400' : 'text-blue-500'}`}></i>
+              <i className={`fas fa-info-circle text-5xl text-blue-400`}></i>
             </div>
-            <h1 className={`text-3xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            <h1 className={`text-3xl font-bold mb-4 text-white`}>
               No Roadmap Data Available
             </h1>
-            <p className={`text-xl mb-8 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+            <p className={`text-xl mb-8 text-gray-300`}>
               We couldn't generate a roadmap for your selected skills. Please try again or select different skills.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">

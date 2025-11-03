@@ -1,33 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { careerAPI } from '../services/api';
+import LinearButton from '../components/LinearButton';
+import LinearCard from '../components/LinearCard';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const Flowchart = () => {
   const [roadmapData, setRoadmapData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [completedSteps, setCompletedSteps] = useState(new Set());
-  const [showCelebration, setShowCelebration] = useState(false); // For completion celebration
   
   const navigate = useNavigate();
   const { currentSkills, currentExpertise } = useAppContext();
-  // Fetch roadmap data from your API
+
+  // Fetch roadmap data
   useEffect(() => {
     const fetchRoadmapData = async () => {
       try {
         setLoading(true);
         setError(null);
         
-        // Check if skills and expertise are available
         if (!currentSkills || !currentExpertise) {
           throw new Error('Skills and expertise are required to generate a roadmap');
         }
         
         const data = await careerAPI.analyzeCareer(currentSkills, currentExpertise);
-        console.log('Received roadmap data:', data);
         
-        // Validate response data
         if (!data || !data.roadmap) {
           throw new Error('Invalid response from server. Please try again.');
         }
@@ -35,11 +36,8 @@ const Flowchart = () => {
         setRoadmapData(data);
       } catch (err) {
         console.error('Error fetching roadmap data:', err);
-        // More user-friendly error messages
         if (err.message.includes('Network Error')) {
-          setError('Unable to connect to the server. Please check your internet connection and try again.');
-        } else if (err.message.includes('Server Error')) {
-          setError('Server is currently unavailable. Please try again in a few minutes.');
+          setError('Unable to connect to the server. Please check your internet connection.');
         } else {
           setError(err.message || 'Failed to fetch roadmap data. Please try again.');
         }
@@ -48,65 +46,45 @@ const Flowchart = () => {
       }
     };
 
-    // Only fetch if we have both skills and expertise
     if (currentSkills && currentExpertise) {
       fetchRoadmapData();
     } else {
-      // Set error if skills or expertise are missing
-      setError('Please provide your skills and expertise level on the home page to generate a personalized roadmap.');
+      setError('Please provide your skills and expertise level to generate a personalized roadmap.');
       setLoading(false);
     }
   }, [currentSkills, currentExpertise]);
 
-  // Load completed steps from localStorage when component mounts and when skills change
+  // Load completed steps from localStorage
   useEffect(() => {
     if (currentSkills) {
       const saved = localStorage.getItem(`completedSteps_${currentSkills}`);
       if (saved) {
         try {
-          const parsed = JSON.parse(saved);
-          setCompletedSteps(new Set(parsed));
+          setCompletedSteps(new Set(JSON.parse(saved)));
         } catch (e) {
-          console.error('Error parsing completed steps from localStorage:', e);
           setCompletedSteps(new Set());
         }
-      } else {
-        setCompletedSteps(new Set());
       }
     }
   }, [currentSkills]);
 
-  // Save completed steps to localStorage whenever they change
+  // Save completed steps to localStorage
   useEffect(() => {
     if (currentSkills) {
       localStorage.setItem(`completedSteps_${currentSkills}`, JSON.stringify([...completedSteps]));
     }
   }, [completedSteps, currentSkills]);
 
-  // Check if all steps are completed for celebration
-  useEffect(() => {
-    if (roadmapData && roadmapData.roadmap && completedSteps.size === roadmapData.roadmap.length && roadmapData.roadmap.length > 0) {
-      setShowCelebration(true);
-      // Hide celebration after 5 seconds
-      const timer = setTimeout(() => {
-        setShowCelebration(false);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [completedSteps, roadmapData]);
-
   // Toggle step completion with sequential logic
   const toggleStepCompletion = (stepIndex) => {
     setCompletedSteps(prev => {
       const newSet = new Set(prev);
       
-      // If step is already completed, allow unchecking
       if (newSet.has(stepIndex)) {
         newSet.delete(stepIndex);
         return newSet;
       }
       
-      // Check if previous step is completed (or if it's the first step)
       if (stepIndex === 0 || newSet.has(stepIndex - 1)) {
         newSet.add(stepIndex);
       }
@@ -123,351 +101,244 @@ const Flowchart = () => {
     }
   };
 
-  // Add auto-scroll to top when component mounts
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
-
-  // Get motivational message based on progress
+  // Get progress message
   const getProgressMessage = () => {
-    if (!roadmapData || !roadmapData.roadmap) return '';
+    if (!roadmapData?.roadmap) return '';
     
     const totalSteps = roadmapData.roadmap.length;
     const completed = completedSteps.size;
-    
-    if (completed === 0) return "Start your journey by completing the first step!";
-    if (completed === 1) return "Great start! Keep going to build momentum.";
-    if (completed === Math.floor(totalSteps / 2)) return "You're halfway there! Keep up the good work.";
-    if (completed === totalSteps - 1) return "Almost there! Complete the final step to finish your journey.";
-    if (completed === totalSteps) return "Congratulations! You've completed your entire learning path!";
-    
     const percentage = Math.round((completed / totalSteps) * 100);
-    if (percentage < 30) return "Keep going, you're making progress!";
-    if (percentage < 60) return "You're on the right track! Keep pushing forward.";
-    if (percentage < 90) return "You're doing great! Almost at the finish line.";
     
-    return "You're nearly there! Just a few more steps to go.";
-  };
-
-  // Get achievement badge based on progress
-  const getAchievementBadge = () => {
-    if (!roadmapData || !roadmapData.roadmap) return null;
-    
-    const totalSteps = roadmapData.roadmap.length;
-    const completed = completedSteps.size;
-    
-    if (completed === 0) return null;
-    if (completed === 1) return { icon: 'fas fa-flag-checkered', text: 'First Step', color: 'blue' };
-    if (completed === Math.floor(totalSteps / 4)) return { icon: 'fas fa-medal', text: 'Quarter Way', color: 'green' };
-    if (completed === Math.floor(totalSteps / 2)) return { icon: 'fas fa-trophy', text: 'Halfway Done', color: 'yellow' };
-    if (completed === Math.floor(totalSteps * 0.75)) return { icon: 'fas fa-award', text: 'Three Quarters', color: 'orange' };
-    if (completed === totalSteps) return { icon: 'fas fa-crown', text: 'Completion Master', color: 'purple' };
-    
-    return null;
+    if (completed === 0) return "Start your journey by completing the first step";
+    if (completed === totalSteps) return "Congratulations! You've completed your entire learning path";
+    if (percentage >= 75) return "Almost there! Just a few more steps to go";
+    if (percentage >= 50) return "You're halfway there! Keep going";
+    return "Keep going, you're making progress";
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen pt-20 professional-background relative overflow-hidden dark">
-        {/* Enhanced Background Elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        </div>
-        
-        <div className="relative z-10 flex items-center justify-center min-h-screen">
-          <div className="text-center p-8 rounded-3xl backdrop-blur-xl border animate-pulse gradient-border">
-            <div className="flex justify-center mb-6">
-              <div className={`w-16 h-16 rounded-full border-4 border-blue-500 border-t-transparent animate-spin`}></div>
-            </div>
-            <h2 className={`text-2xl font-bold mb-2 text-white`}>
-              Generating Your Flowchart
-            </h2>
-            <p className="text-gray-300">
-              Creating a personalized learning path for <span className="font-semibold">{currentSkills || 'your selected domain'}</span>...
-            </p>
-          </div>
-        </div>
+      <div className="min-h-screen bg-bg-primary text-text-primary pt-16 flex items-center justify-center">
+        <LoadingSpinner size="lg" text="Generating your learning flowchart..." />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen pt-20 professional-background relative overflow-hidden dark">
-        {/* Enhanced Background Elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className={`absolute top-20 left-20 w-64 h-64 rounded-full opacity-20 animate-pulseGlow blur-3xl bg-gradient-to-r from-blue-500/40 to-indigo-500/40 animate-float`}></div>
-          <div className={`absolute bottom-20 right-20 w-48 h-48 rounded-full opacity-15 animate-drift blur-2xl bg-gradient-to-r from-purple-500/40 to-blue-500/40`}></div>
-        </div>
-        
-        <div className="relative z-10 max-w-6xl mx-auto px-6 py-12">
-          <div className="text-center p-10 rounded-3xl backdrop-blur-xl border gradient-border">
-            <div className="mb-6">
-              <i className={`fas fa-exclamation-triangle text-5xl text-yellow-400`}></i>
-            </div>
-            <h1 className={`text-3xl font-bold mb-4 text-white`}>
-              Error Loading Flowchart
-            </h1>
-            <p className={`text-xl mb-8 text-gray-300`}>
-              {error}
-            </p>
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <button
-                onClick={() => navigate('/')}
-                className="px-6 py-3 rounded-2xl font-bold transition-all duration-300 hover:scale-105 gradient-border"
-              >
-                <i className="fas fa-home mr-2"></i>
-                Go Back Home
-              </button>
-              <button
-                onClick={() => window.location.reload()}
-                className="px-6 py-3 rounded-2xl font-bold transition-all duration-300 hover:scale-105 gradient-border"
-              >
-                <i className="fas fa-sync mr-2"></i>
-                Retry
-              </button>
-            </div>
+      <div className="min-h-screen bg-bg-primary text-text-primary pt-16">
+        <div className="linear-container py-16">
+          <div className="max-w-2xl mx-auto text-center">
+            <div className="text-6xl mb-6">⚠️</div>
+            <h2 className="text-title-3 font-semibold mb-4">Unable to load flowchart</h2>
+            <p className="text-regular text-text-secondary mb-8">{error}</p>
+            <LinearButton variant="primary" onClick={() => navigate('/')}>
+              Go back home
+            </LinearButton>
           </div>
         </div>
       </div>
     );
   }
 
+  const totalSteps = roadmapData?.roadmap?.length || 0;
+  const completedCount = completedSteps.size;
+  const progressPercent = totalSteps > 0 ? Math.round((completedCount / totalSteps) * 100) : 0;
+
   return (
-    <div className={`min-h-screen pt-24 professional-background relative overflow-hidden dark`}>
-      {/* Enhanced Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className={`absolute top-20 left-20 w-64 h-64 rounded-full opacity-20 animate-pulseGlow blur-3xl bg-gradient-to-r from-blue-500/40 to-indigo-500/40 animate-float`}></div>
-        <div className={`absolute bottom-20 right-20 w-48 h-48 rounded-full opacity-15 animate-drift blur-2xl bg-gradient-to-r from-purple-500/40 to-blue-500/40`}></div>
-        
-        {/* Subtle particle effects */}
-        <div className={`absolute top-1/3 left-1/3 w-2 h-2 rounded-full animate-float bg-blue-400`} style={{animationDuration: '9s', marginLeft: '-1px', marginTop: '-1px'}}></div>
-        <div className={`absolute bottom-1/4 right-1/4 w-1.5 h-1.5 rounded-full animate-drift bg-indigo-400`} style={{animationDuration: '11s', marginLeft: '-0.75px', marginTop: '-0.75px'}}></div>
-        <div className={`absolute top-2/3 left-1/5 w-2.5 h-2.5 rounded-full animate-driftDelayed bg-purple-400`} style={{animationDuration: '13s', marginLeft: '-1.25px', marginTop: '-1.25px'}}></div>
-      </div>
-      
-      {/* Celebration Animation */}
-      {showCelebration && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-          <div className="text-center animate-bounce">
-            <div className="text-6xl mb-4">🎉</div>
-            <div className={`text-3xl font-bold px-6 py-3 rounded-full backdrop-blur-xl bg-green-900/50 text-green-200`}>
-              Congratulations!
+    <div className="min-h-screen bg-bg-primary text-text-primary pt-16">
+      {/* Header with Progress */}
+      <section className="py-12 border-b border-border-primary">
+        <div className="linear-container">
+          <div className="max-w-3xl">
+            <h1 className="text-title-4 font-semibold mb-3" style={{ letterSpacing: '-.022em' }}>
+              {roadmapData?.career_path || currentSkills} Learning Path
+            </h1>
+            <p className="text-regular text-text-secondary mb-6">
+              {getProgressMessage()}
+            </p>
+
+            {/* Progress Bar */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-small text-text-tertiary">
+                  {completedCount} of {totalSteps} completed
+                </span>
+                <span className="text-small font-semibold text-text-secondary">
+                  {progressPercent}%
+                </span>
+              </div>
+              <div 
+                className="h-2 rounded-full overflow-hidden"
+                style={{ background: 'var(--color-bg-tertiary)' }}
+              >
+                <motion.div
+                  className="h-full rounded-full"
+                  style={{ background: 'var(--color-accent)' }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progressPercent}%` }}
+                  transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <LinearButton variant="secondary" size="small" onClick={() => navigate('/simplified-ultimate-roadmap')}>
+                ← View roadmap
+              </LinearButton>
+              {completedCount > 0 && (
+                <LinearButton variant="ghost" size="small" onClick={resetProgress}>
+                  Reset progress
+                </LinearButton>
+              )}
             </div>
           </div>
         </div>
-      )}
-      
-      <div className="relative z-10 max-w-6xl mx-auto px-6 py-12">
-        <div className="text-center mb-12">
-          <h1 className={`text-4xl md:text-5xl font-black mb-6 text-white`}>
-            Your Learning Flowchart
-          </h1>
-          <p className={`text-xl max-w-3xl mx-auto mb-8 text-gray-300`}>
-            Visual roadmap for <span className="font-bold gradient-text">{currentSkills || 'your selected domain'}</span>
-          </p>
-        </div>
+      </section>
 
-        {roadmapData && (
-          <div className="mb-12">
-            {/* Achievement Badge */}
-            {getAchievementBadge() && (
-              <div className={`mb-6 p-4 rounded-2xl backdrop-blur-xl border text-center animate-pulse bg-gray-800/50 border-gray-700/50`}>
-                <i className={`${getAchievementBadge().icon} text-2xl mr-2 ${
-                  getAchievementBadge().color === 'blue' ? 'text-blue-500' :
-                  getAchievementBadge().color === 'green' ? 'text-green-500' :
-                  getAchievementBadge().color === 'yellow' ? 'text-yellow-500' :
-                  getAchievementBadge().color === 'orange' ? 'text-orange-500' :
-                  getAchievementBadge().color === 'purple' ? 'text-purple-500' : 'text-gray-500'
-                }`}></i>
-                <span className={`font-bold ${
-                  'text-white'
-                }`}>
-                  Achievement Unlocked: {getAchievementBadge().text}
-                </span>
-              </div>
-            )}
-            
-            {/* Motivational Message */}
-            <div className={`mb-6 p-4 rounded-2xl backdrop-blur-xl border bg-gray-800/50 border-gray-700/50`}>
-              <p className={`text-center font-medium text-gray-200`}>
-                <i className="fas fa-lightbulb mr-2 text-yellow-500"></i>
-                {getProgressMessage()}
-              </p>
-            </div>
-            
-            <div className={`p-8 rounded-3xl backdrop-blur-xl border mb-8 gradient-border border-gray-700/50`}>
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-                <div>
-                  <h2 className={`text-2xl font-bold mb-2 text-white`}>
-                    Learning Path Overview
-                  </h2>
-                  <p className={'text-gray-300'}>
-                    Follow this structured approach to master your chosen field
-                  </p>
-                </div>
-                <button
-                  onClick={resetProgress}
-                  className={`px-4 py-2 rounded-xl font-bold transition-all duration-300 hover:scale-105 mt-4 md:mt-0 bg-gray-700 text-white hover:bg-gray-600`}
-                >
-                  <i className="fas fa-redo mr-2"></i>
-                  Reset Progress
-                </button>
-              </div>
+      {/* Learning Steps */}
+      <section className="py-12">
+        <div className="linear-container">
+          <div className="max-w-3xl">
+            <div className="space-y-6">
+              {roadmapData?.roadmap?.map((step, index) => {
+                const isCompleted = completedSteps.has(index);
+                const isUnlocked = index === 0 || completedSteps.has(index - 1);
+                const isLocked = !isUnlocked;
 
-              {/* Flowchart Visualization */}
-              <div className="relative">
-                {/* Connection lines */}
-                <div className={`absolute left-8 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-indigo-500 transform -translate-x-1/2`}></div>
-                
-                <div className="space-y-8 pl-16">
-                  {(roadmapData.roadmap || []).map((step, index) => {
-                    const isCompleted = completedSteps.has(index);
-                    const isUnlocked = index === 0 || completedSteps.has(index - 1);
-                    const isLocked = !isUnlocked && !isCompleted;
-                    
-                    return (
-                      <div key={index} className="relative animate-fadeIn" style={{animationDelay: `${index * 100}ms`}}>
-                        {/* Step connector dot */}
-                        <div className={`absolute left-[-52px] top-6 w-6 h-6 rounded-full flex items-center justify-center transform -translate-x-1/2 ${
-                          isCompleted 
-                            ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
-                            : isLocked
-                              ? ('bg-gray-600')
-                              : 'bg-gradient-to-r from-blue-500 to-indigo-500'
-                        }`}>
-                          {isCompleted ? (
-                            <i className="fas fa-check text-white text-xs"></i>
-                          ) : isLocked ? (
-                            <i className="fas fa-lock text-white text-xs"></i>
-                          ) : (
-                            <span className="text-white font-bold text-xs">{index + 1}</span>
+                return (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.03, duration: 0.3 }}
+                  >
+                    <LinearCard 
+                      className={`p-6 ${isUnlocked ? 'cursor-pointer' : 'opacity-50'}`}
+                      onClick={() => isUnlocked && toggleStepCompletion(index)}
+                    >
+                      <div className="flex items-start gap-4">
+                        {/* Step Number/Checkbox */}
+                        <div className="flex-shrink-0 mt-1">
+                          <motion.button
+                            className={`
+                              w-6 h-6 rounded-full flex items-center justify-center
+                              border-2 transition-regular
+                            `}
+                            style={{
+                              borderColor: isCompleted ? 'var(--color-accent)' : 'var(--color-border-tertiary)',
+                              background: isCompleted ? 'var(--color-accent)' : 'transparent',
+                            }}
+                            whileHover={isUnlocked ? { scale: 1.1 } : {}}
+                            whileTap={isUnlocked ? { scale: 0.95 } : {}}
+                            disabled={isLocked}
+                          >
+                            {isCompleted ? (
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                                <path d="M5 13l4 4L19 7" />
+                              </svg>
+                            ) : isLocked ? (
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-quaternary">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                              </svg>
+                            ) : (
+                              <span className="text-micro font-semibold text-text-tertiary">
+                                {index + 1}
+                              </span>
+                            )}
+                          </motion.button>
+                        </div>
+
+                        {/* Step Content */}
+                        <div className="flex-grow">
+                          <div className="flex items-start justify-between mb-2">
+                            <h3 
+                              className={`
+                                text-regular font-semibold
+                                ${isCompleted ? 'text-text-tertiary line-through' : 'text-text-primary'}
+                                ${isLocked ? 'text-text-quaternary' : ''}
+                              `}
+                            >
+                              {step.title || step.step || `Step ${index + 1}`}
+                            </h3>
+                            {isCompleted && (
+                              <span 
+                                className="text-micro font-medium px-2 py-0.5 rounded-6"
+                                style={{ 
+                                  background: 'rgba(113, 112, 255, 0.15)',
+                                  color: 'var(--color-accent-hover)',
+                                }}
+                              >
+                                Done
+                              </span>
+                            )}
+                          </div>
+
+                          {step.description && (
+                            <p 
+                              className={`
+                                text-small mb-3
+                                ${isCompleted ? 'text-text-quaternary' : 'text-text-tertiary'}
+                              `}
+                            >
+                              {step.description}
+                            </p>
+                          )}
+
+                          {step.resources && step.resources.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-3">
+                              {step.resources.map((resource, i) => (
+                                <span 
+                                  key={i}
+                                  className="text-micro px-2 py-1 rounded-6"
+                                  style={{ 
+                                    background: 'rgba(255, 255, 255, 0.03)',
+                                    color: 'var(--color-text-tertiary)'
+                                  }}
+                                >
+                                  {resource}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {step.duration && (
+                            <div className="text-micro text-text-quaternary mt-2">
+                              ⏱️ {step.duration}
+                            </div>
                           )}
                         </div>
-                        
-                        {/* Step card */}
-                        <div 
-                          className={`p-6 rounded-2xl backdrop-blur-xl border transition-all duration-300 hover:scale-[1.02] gradient-border tilt-effect ${
-                            isCompleted 
-                              ? ('border-green-500/30')
-                              : isLocked
-                                ? ('border-gray-700/30 opacity-60 cursor-not-allowed')
-                                : ('border-gray-700/50 cursor-pointer')
-                          }`}
-                          onClick={() => {
-                            if (!isLocked) {
-                              toggleStepCompletion(index);
-                            }
-                          }}
-                        >
-                          <div className="flex justify-between items-start mb-4">
-                            <h3 className={`text-xl font-bold text-white`}>
-                              {step.title}
-                              {isLocked && (
-                                <span className={`ml-2 text-sm px-2 py-1 rounded-full bg-gray-700 text-gray-300`}>
-                                  <i className="fas fa-lock mr-1"></i>
-                                  Locked
-                                </span>
-                              )}
-                            </h3>
-                            <div className={`px-3 py-1 rounded-full text-sm font-bold bg-blue-900/50 text-blue-200`}>
-                              {step.duration}
-                            </div>
-                          </div>
-                          
-                          <p className={`mb-4 text-gray-300`}>
-                            {step.description}
-                          </p>
-                          
-                          <div className="flex flex-wrap gap-2 mb-4">
-                            {(step.resources || []).slice(0, 3).map((resource, resourceIndex) => (
-                              <span 
-                                key={resourceIndex}
-                                className={`px-3 py-1 rounded-full text-xs font-bold bg-blue-900/40 text-blue-200`}
-                              >
-                                {resource}
-                              </span>
-                            ))}
-                            {(step.resources || []).length > 3 && (
-                              <span className={`px-3 py-1 rounded-full text-xs font-bold bg-gray-700 text-gray-300`}>
-                                +{(step.resources || []).length - 3} more
-                              </span>
-                            )}
-                          </div>
-                          
-                          <div className="flex justify-between items-center">
-                            <span className={`text-sm text-gray-400`}>
-                              {isLocked 
-                                ? `Complete step ${index} to unlock` 
-                                : `Click to mark as ${isCompleted ? 'incomplete' : 'complete'}`}
-                            </span>
-                            {isCompleted && (
-                              <span className={`px-3 py-1 rounded-full text-xs font-bold bg-green-900/50 text-green-200`}>
-                                <i className="fas fa-check mr-1"></i>
-                                Completed
-                              </span>
-                            )}
-                          </div>
-                        </div>
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
+                    </LinearCard>
+                  </motion.div>
+                );
+              })}
             </div>
 
-            {/* Progress Summary */}
-            <div className={`p-6 rounded-2xl backdrop-blur-xl border gradient-border border-gray-700/50`}>
-              <h3 className={`text-xl font-bold mb-4 text-white`}>
-                Progress Summary
-              </h3>
-              <div className="flex items-center">
-                <div className="flex-1 mr-4">
-                  <div className={`w-full h-3 rounded-full bg-gray-700`}>
-                    <div 
-                      className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"
-                      style={{ width: `${roadmapData.roadmap && roadmapData.roadmap.length > 0 ? (completedSteps.size / roadmapData.roadmap.length) * 100 : 0}%` }}
-                    ></div>
-                  </div>
-                </div>
-                <span className={`font-bold text-white`}>
-                  {completedSteps.size} of {roadmapData.roadmap ? roadmapData.roadmap.length : 0} steps completed
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {/* Fallback content if roadmapData is not available */}
-        {!roadmapData && !loading && !error && (
-          <div className="text-center p-10 rounded-3xl backdrop-blur-xl border gradient-border">
-            <div className="mb-6">
-              <i className={`fas fa-info-circle text-5xl text-blue-400`}></i>
-            </div>
-            <h1 className={`text-3xl font-bold mb-4 text-white`}>
-              No Roadmap Data Available
-            </h1>
-            <p className={`text-xl mb-8 text-gray-300`}>
-              We couldn't generate a roadmap for your selected skills. Please try again or select different skills.
-            </p>
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <button
-                onClick={() => navigate('/')}
-                className="px-6 py-3 rounded-2xl font-bold transition-all duration-300 hover:scale-105 gradient-border"
+            {/* Completion Message */}
+            {completedCount === totalSteps && totalSteps > 0 && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2 }}
+                className="mt-12 text-center"
               >
-                <i className="fas fa-home mr-2"></i>
-                Select Skills
-              </button>
-              <button
-                onClick={() => window.location.reload()}
-                className="px-6 py-3 rounded-2xl font-bold transition-all duration-300 hover:scale-105 gradient-border"
-              >
-                <i className="fas fa-sync mr-2"></i>
-                Retry
-              </button>
-            </div>
+                <div className="text-6xl mb-4">🎉</div>
+                <h2 className="text-title-3 font-semibold mb-3">
+                  Congratulations!
+                </h2>
+                <p className="text-regular text-text-secondary mb-6">
+                  You've completed your entire learning path for {currentSkills}
+                </p>
+                <LinearButton variant="primary" size="large" onClick={() => navigate('/')}>
+                  Explore more careers
+                </LinearButton>
+              </motion.div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      </section>
     </div>
   );
 };

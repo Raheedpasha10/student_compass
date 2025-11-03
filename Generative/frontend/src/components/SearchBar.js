@@ -1,194 +1,111 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { fieldsByCategory, domainsByField } from '../constants/careerData';
+import { motion, AnimatePresence } from 'framer-motion';
+import { quickSelectDomains } from '../constants/careerData';
 
-const SearchBar = ({ onNavigate, placeholder = "Search careers, skills, or specializations...", className = "", compact = false }) => {
+const SearchBar = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const navigate = useNavigate();
   const { setCurrentSkills, setCurrentExpertise } = useAppContext();
-  const [query, setQuery] = useState('');
-  const [suggestions, setSuggestions] = useState([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState(-1);
-  const searchRef = useRef(null);
-  const suggestionRef = useRef(null);
 
-  // Size classes based on compact prop
-  const inputClasses = compact 
-    ? "flex-grow p-2 pl-10 pr-10 rounded-l-xl text-sm shadow-md theme-input focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent border-0 text-white"
-    : "flex-grow p-5 pl-10 pr-16 rounded-l-2xl text-lg shadow-lg theme-input focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent border-0 text-white";
-  
-  const buttonClasses = compact
-    ? "rounded-r-xl h-full py-2 px-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold transition-all duration-300 hover:scale-105"
-    : "rounded-r-2xl h-full py-5 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold transition-all duration-300 hover:scale-105";
-  
-  const iconClasses = compact ? "h-4 w-4" : "h-6 w-6";
-  const containerClasses = compact ? "rounded-xl" : "rounded-2xl";
-
-  // Build search index: categories, fields, and domains
-  useEffect(() => {
-    const allFields = Object.values(fieldsByCategory).flat();
-    const allDomains = Object.values(domainsByField).flat();
-    
-    const searchIndex = [
-      ...allFields.map(field => ({ text: field, type: 'field', category: 'Fields' })),
-      ...allDomains.map(domain => ({ text: domain, type: 'domain', category: 'Specializations' }))
-    ];
-
-    // Store in component for use in filter
-    searchRef.current = searchIndex;
-  }, []);
-
-  // Filter suggestions as user types
-  useEffect(() => {
-    if (query.trim().length > 0 && searchRef.current) {
-      const lowerQuery = query.toLowerCase();
-      const filtered = searchRef.current
-        .filter(item => item.text.toLowerCase().includes(lowerQuery))
-        .slice(0, 8) // Limit to 8 suggestions
-        .sort((a, b) => {
-          // Prioritize exact matches
-          const aStarts = a.text.toLowerCase().startsWith(lowerQuery);
-          const bStarts = b.text.toLowerCase().startsWith(lowerQuery);
-          if (aStarts && !bStarts) return -1;
-          if (!aStarts && bStarts) return 1;
-          return 0;
-        });
-      setSuggestions(filtered);
-      setShowSuggestions(filtered.length > 0);
-    } else {
-      setSuggestions([]);
-      setShowSuggestions(false);
-    }
-  }, [query]);
-
-  // Handle keyboard navigation
-  const handleKeyDown = (e) => {
-    if (!showSuggestions || suggestions.length === 0) return;
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setSelectedIndex(prev => (prev < suggestions.length - 1 ? prev + 1 : prev));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setSelectedIndex(prev => (prev > 0 ? prev - 1 : -1));
-    } else if (e.key === 'Enter' && selectedIndex >= 0) {
-      e.preventDefault();
-      handleSelectSuggestion(suggestions[selectedIndex].text);
-    } else if (e.key === 'Escape') {
-      setShowSuggestions(false);
-    }
-  };
-
-  // Handle suggestion selection
-  const handleSelectSuggestion = (text) => {
-    setQuery(text);
-    setShowSuggestions(false);
-    setSelectedIndex(-1);
-    
-    // Navigate to roadmap with the selected skill
-    setCurrentSkills(text);
+  const handleSearch = (field) => {
+    setCurrentSkills(field);
     setCurrentExpertise('Beginner');
-    setTimeout(() => {
-      navigate('/simplified-ultimate-roadmap');
-    }, 100);
-    
-    if (onNavigate) {
-      onNavigate(text);
-    }
+    setSearchTerm('');
+    setShowSuggestions(false);
+    navigate('/simplified-ultimate-roadmap');
   };
 
-  // Handle direct search on Enter without selection
-  const handleSearch = (e) => {
-    if (e.key === 'Enter' && query.trim() && selectedIndex === -1) {
-      const lowerQuery = query.toLowerCase();
-      const allFields = Object.values(fieldsByCategory).flat();
-      const allDomains = Object.values(domainsByField).flat();
-      
-      // Try to find exact match
-      const exactMatch = allFields.find(f => f.toLowerCase() === lowerQuery) || 
-                        allDomains.find(d => d.toLowerCase() === lowerQuery);
-      
-      if (exactMatch) {
-        handleSelectSuggestion(exactMatch);
-      } else {
-        setShowSuggestions(true);
-      }
-    }
-  };
-
-  // Click outside to close suggestions
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (suggestionRef.current && !suggestionRef.current.contains(event.target)) {
-        setShowSuggestions(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  const filteredSuggestions = quickSelectDomains.filter(item =>
+    item.field.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className={`relative ${className}`} ref={suggestionRef}>
-      <div className={`relative enhanced-gradient-border hover-lift interactive-glow-primary ${containerClasses}`}>
-        <div className="flex items-center relative">
-          <svg xmlns="http://www.w3.org/2000/svg" className={`absolute ${compact ? 'h-3 w-3' : 'h-4 w-4'} left-3 text-gray-400 z-10`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+    <div className="relative w-full md:w-64">
+      <div className="relative">
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setShowSuggestions(true);
+          }}
+          onFocus={() => setShowSuggestions(true)}
+          onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+          placeholder="Search careers..."
+          className="w-full h-10 px-3 pr-10 rounded-8
+            bg-bg-secondary border border-border-primary
+            text-text-primary text-small
+            placeholder-text-quaternary
+            transition-regular ease-out-quad
+            focus:outline-none focus:border-accent"
+          style={{
+            transitionProperty: 'border-color, background-color',
+            transitionDuration: '.16s',
+            transitionTimingFunction: 'cubic-bezier(.25, .46, .45, .94)',
+          }}
+        />
+        <motion.div
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-text-quaternary"
+          whileHover={{ scale: 1.1 }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
           </svg>
-          <input
-            type="text"
-            placeholder={placeholder}
-            className={inputClasses}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              handleKeyDown(e);
-              handleSearch(e);
-            }}
-            onFocus={() => query.trim() && suggestions.length > 0 && setShowSuggestions(true)}
-          />
-          <button
-            className={buttonClasses}
-            onClick={(e) => {
-              if (query.trim()) {
-                handleSearch({ key: 'Enter', preventDefault: () => {} });
-              }
-            }}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className={iconClasses} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </button>
-        </div>
+        </motion.div>
       </div>
 
-      {/* Dropdown Suggestions */}
-      {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl max-h-96 overflow-y-auto z-50 backdrop-blur-xl">
-          {suggestions.map((item, index) => (
-            <button
-              key={`${item.type}-${item.text}-${index}`}
-              className={`w-full text-left px-6 py-4 hover:bg-gray-700 transition-colors duration-150 flex items-center justify-between ${
-                index === selectedIndex ? 'bg-gray-700' : ''
-              } ${index === 0 ? 'rounded-t-2xl' : ''} ${index === suggestions.length - 1 ? 'rounded-b-2xl' : ''}`}
-              onMouseEnter={() => setSelectedIndex(index)}
-              onClick={() => handleSelectSuggestion(item.text)}
-            >
-              <div className="flex items-center space-x-3">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <span className="text-white font-medium">{item.text}</span>
-              </div>
-              <span className="text-xs text-gray-400 bg-gray-700 px-2 py-1 rounded">{item.category}</span>
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Suggestions Dropdown */}
+      <AnimatePresence>
+        {showSuggestions && searchTerm && filteredSuggestions.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98, y: -10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.98, y: -10 }}
+            transition={{ duration: 0.16, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="absolute top-full mt-2 w-full rounded-8 overflow-hidden shadow-linear-medium z-50"
+            style={{
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              background: 'rgba(28, 28, 31, 0.95)',
+              border: '0.5px solid rgba(255, 255, 255, 0.08)',
+            }}
+          >
+            <div className="max-h-64 overflow-y-auto">
+              {filteredSuggestions.slice(0, 8).map((item, index) => (
+                <motion.button
+                  key={index}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: index * 0.03 }}
+                  onClick={() => handleSearch(item.field)}
+                  className="w-full px-3 py-2.5 text-left text-small
+                    text-text-secondary hover:text-text-primary
+                    hover:bg-bg-translucent
+                    transition-regular ease-out-quad
+                    border-b border-border-translucent last:border-0"
+                  style={{
+                    transitionProperty: 'background-color, color',
+                    transitionDuration: '.16s',
+                  }}
+                >
+                  <div>
+                    <div className="font-medium">{item.field}</div>
+                    {item.description && (
+                      <div className="text-micro text-text-tertiary mt-0.5">{item.description}</div>
+                    )}
+                  </div>
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
 
 export default SearchBar;
-

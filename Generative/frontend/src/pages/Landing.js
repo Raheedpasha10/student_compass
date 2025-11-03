@@ -1,555 +1,1424 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { motion, AnimatePresence } from 'framer-motion';
-import Enhanced3DButton from '../components/Enhanced3DButton';
-import SearchBar from '../components/SearchBar';
-import { quickSelectDomains, categories, fieldsByCategory, domainsByField } from '../constants/careerData';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import LinearButton from '../components/LinearButton';
+import LinearCard from '../components/LinearCard';
+import { categories, fieldsByCategory, domainsByField } from '../constants/careerData';
+
+// Lazy load mind map component
+const CareerMindMap = lazy(() => import('../components/CareerMindMap'));
+
+// Path maps for mind map nodes
+const PATH_MAPS = {
+  software: ['React', 'Node.js', 'API', 'System Design', 'Databases', 'DevOps'],
+  data: ['Python', 'ML', 'Pandas', 'Data Viz', 'Neural Nets'],
+  ux: ['Figma', 'Wireframes', 'Prototyping', 'User Flow', 'Typography'],
+  marketing: ['SEO', 'Analytics', 'Branding', 'Growth', 'Campaigns']
+};
+
+// Map pattern to path key
+const PATTERN_TO_PATH = {
+  'code': 'software',
+  'chart': 'data',
+  'grid': 'ux',
+  'trend': 'marketing'
+};
 
 const Landing = () => {
   const [activeTab, setActiveTab] = useState('categories');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedField, setSelectedField] = useState('');
-  const [showMoreContent, setShowMoreContent] = useState(false);
   const [animationStage, setAnimationStage] = useState(0);
+  const [activeCareerIndex, setActiveCareerIndex] = useState(0);
   const navigate = useNavigate();
   const { setCurrentSkills, setCurrentExpertise } = useAppContext();
+  const heroRef = useRef(null);
+  const carouselRef = useRef(null);
 
-  // Animation sequence
+  // Simple hero fade effect for performance
+  const [heroBlur, setHeroBlur] = useState(0);
+  const [heroOpacity, setHeroOpacity] = useState(1);
+  const [isHovered, setIsHovered] = useState(false);
+
+  // Career data (must be defined before useEffect that uses it)
+  const popularCareers = [
+    {
+      title: 'Software Engineering',
+      subtitle: 'Build the future with code',
+      field: 'Software Engineering',
+      icon: (
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <polyline points="16 18 22 12 16 6"/>
+          <polyline points="8 6 2 12 8 18"/>
+        </svg>
+      ),
+      pattern: 'code'
+    },
+    {
+      title: 'Data Science',
+      subtitle: 'Transform data into insights',
+      field: 'Data Science',
+      icon: (
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <line x1="12" y1="20" x2="12" y2="10"/>
+          <line x1="18" y1="20" x2="18" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="16"/>
+        </svg>
+      ),
+      pattern: 'chart'
+    },
+    {
+      title: 'UI/UX Design',
+      subtitle: 'Craft beautiful experiences',
+      field: 'User Experience Design',
+      icon: (
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <rect x="3" y="3" width="7" height="7"/>
+          <rect x="14" y="3" width="7" height="7"/>
+          <rect x="14" y="14" width="7" height="7"/>
+          <rect x="3" y="14" width="7" height="7"/>
+        </svg>
+      ),
+      pattern: 'grid'
+    },
+    {
+      title: 'Digital Marketing',
+      subtitle: 'Grow brands strategically',
+      field: 'Digital Marketing',
+      icon: (
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+      ),
+      pattern: 'trend'
+    }
+  ];
+
+  // Staggered animation sequence
   useEffect(() => {
-    const timer1 = setTimeout(() => setAnimationStage(1), 300);
-    const timer2 = setTimeout(() => setAnimationStage(2), 600);
-    const timer3 = setTimeout(() => setAnimationStage(3), 900);
-    const timer4 = setTimeout(() => setAnimationStage(4), 1200);
-    
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-      clearTimeout(timer4);
-    };
+    const timers = [100, 200, 300, 400].map((delay, i) => 
+      setTimeout(() => setAnimationStage(i + 1), delay)
+    );
+    return () => timers.forEach(clearTimeout);
   }, []);
 
-  const handleQuickSelect = (item) => {
-    setCurrentSkills(item.field);
+  // Optimized scroll fade for hero (passive, requestAnimationFrame throttled)
+  useEffect(() => {
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const scrollTop = window.scrollY;
+          const triggerPoint = window.innerHeight * 0.2;
+          const fadeRange = window.innerHeight * 0.35;
+          
+          const progress = Math.max(0, Math.min(1, (scrollTop - triggerPoint) / fadeRange));
+          setHeroBlur(progress * 8);
+          setHeroOpacity(Math.max(0.4, 1 - progress * 0.6));
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Track carousel scroll position for indicator
+  useEffect(() => {
+    const carouselContainer = carouselRef.current;
+    if (!carouselContainer) return;
+
+    let ticking = false;
+    const handleCarouselScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const scrollLeft = carouselContainer.scrollLeft;
+          const scrollWidth = carouselContainer.scrollWidth - carouselContainer.clientWidth;
+          const progress = scrollWidth > 0 ? scrollLeft / scrollWidth : 0;
+          const index = Math.round(progress * (popularCareers.length - 1));
+          setActiveCareerIndex(Math.min(index, popularCareers.length - 1));
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    carouselContainer.addEventListener('scroll', handleCarouselScroll, { passive: true });
+    return () => carouselContainer.removeEventListener('scroll', handleCarouselScroll);
+  }, []);
+
+  const handleQuickSelect = (field) => {
+    setCurrentSkills(field);
     setCurrentExpertise('Beginner');
-    setTimeout(() => {
       navigate('/simplified-ultimate-roadmap');
-    }, 100);
   };
 
-  // Handle category selection
   const handleCategorySelect = (categoryId) => {
     setSelectedCategory(categoryId);
     setSelectedField('');
     setActiveTab('fields');
   };
 
-  // Handle field selection
   const handleFieldSelect = (field) => {
     setSelectedField(field);
     setActiveTab('specializations');
   };
 
-  // Handle domain selection and navigation
   const handleDomainSelect = (domain) => {
-    // Pass the specialization (domain) instead of the field
     setCurrentSkills(domain);
     setCurrentExpertise('Beginner');
-    setTimeout(() => {
       navigate('/simplified-ultimate-roadmap');
-    }, 100);
   };
 
-  // Toggle more content
-  const toggleMoreContent = () => {
-    setShowMoreContent(!showMoreContent);
-  };
-
-  // Reset selection
   const resetSelection = () => {
     setSelectedCategory('');
     setSelectedField('');
     setActiveTab('categories');
   };
 
-  // Get fields for current category
-  const fields = fieldsByCategory[selectedCategory] || [];
+  const scrollToSection = (id) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
-  // Get domains for current field
+  const fields = fieldsByCategory[selectedCategory] || [];
   const domains = domainsByField[selectedField] || [];
 
-  // Container variants for animations
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
+  // Refined Career Scene Component - Linear elegance
+  const CareerScene = ({ career, index, onSelect }) => {
+    const [isHovered, setIsHovered] = useState(false);
+    const [showMindMap, setShowMindMap] = useState(false);
+    const [mindMapMounted, setMindMapMounted] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+    const sceneRef = useRef(null);
+    
+    // Note: Removed parallax scroll effects to prevent flicker on navigation/refresh
+    
+    // Detect mobile
+    useEffect(() => {
+      const checkMobile = () => {
+        setIsMobile(window.innerWidth < 768);
+      };
+      checkMobile();
+      window.addEventListener('resize', checkMobile);
+      return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
-  // Item variants for animations
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 100
+    // Lazy load mind map on first hover
+    const handleMouseEnter = () => {
+      setIsHovered(true);
+      setShowMindMap(true);
+      if (!mindMapMounted) {
+        setMindMapMounted(true);
       }
-    }
-  };
+    };
 
-  // Scroll to career selection section
-  const scrollToCareerSelection = (e) => {
-    e.preventDefault();
-    const element = document.getElementById('choose-interest-area');
-    if (element) {
-      // Use a more reliable scrolling method
-      const yOffset = -80; // Adjust for fixed header if needed
-      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      window.scrollTo({ top: y, behavior: 'smooth' });
-    }
+    const handleMouseLeave = () => {
+      setIsHovered(false);
+      setShowMindMap(false);
+    };
+
+    // Get nodes for this career
+    const pathKey = PATTERN_TO_PATH[career.pattern];
+    const nodes = PATH_MAPS[pathKey] || [];
+
+    // Minimal animated background
+    const renderBackground = () => {
+      switch (career.pattern) {
+        case 'code':
+          return (
+            <div className="absolute inset-0 opacity-[0.015]">
+              <div className="absolute inset-0"
+                style={{
+                  backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255,255,255,.5) 35px, rgba(255,255,255,.5) 36px)',
+                  backgroundSize: '60px 60px',
+                }}
+              />
+            </div>
+          );
+        case 'chart':
+          return (
+            <div className="absolute inset-0 opacity-[0.015]">
+              <svg className="absolute inset-0 w-full h-full">
+                {[0, 1, 2].map((i) => (
+                  <motion.line
+                    key={i}
+                    x1="0"
+                    y1={`${35 + i * 20}%`}
+                    x2="100%"
+                    y2={`${40 + i * 10}%`}
+                    stroke="rgba(255,255,255,0.3)"
+                    strokeWidth="0.5"
+                    animate={{ pathLength: 1 }}
+                    transition={{
+                      duration: 3,
+                      delay: i * 0.2,
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                      ease: "easeInOut"
+                    }}
+                  />
+                ))}
+              </svg>
+            </div>
+          );
+        case 'grid':
+          return (
+            <div className="absolute inset-0 opacity-[0.015]"
+              style={{
+                backgroundImage: 'linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px)',
+                backgroundSize: '32px 32px',
+              }}
+            />
+          );
+        case 'trend':
+          return (
+            <div className="absolute inset-0 opacity-[0.015]">
+              {[0, 1, 2].map((i) => (
+                <motion.div
+                  key={i}
+                  className="absolute"
+                  style={{
+                    width: '2px',
+                    height: '100%',
+                    background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.3), transparent)',
+                    left: `${20 + i * 30}%`,
+                  }}
+                  animate={{
+                    y: ['-100%', '100%'],
+                  }}
+                  transition={{
+                    duration: 4 + i * 0.5,
+                    delay: i * 0.3,
+                    repeat: Infinity,
+                    ease: "linear"
+                  }}
+                />
+              ))}
+            </div>
+          );
+        default:
+          return null;
+      }
+    };
+
+    return (
+      <motion.div
+        ref={sceneRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className="relative w-full snap-start"
+        whileHover={{ y: -6 }}
+        transition={{
+          type: "spring",
+          damping: 20,
+          stiffness: 200
+        }}
+      >
+        {/* Featured card ambient border glow */}
+        {index === 0 && (
+          <div
+            className="absolute inset-0 pointer-events-none rounded-12"
+            style={{
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              boxShadow: '0 0 40px rgba(255, 255, 255, 0.03)',
+            }}
+          />
+        )}
+
+        <LinearCard
+          onClick={() => onSelect(career.field)}
+          className="relative cursor-pointer overflow-hidden"
+          style={{ 
+            minHeight: '420px',
+          }}
+        >
+          {/* Minimal background */}
+          {renderBackground()}
+
+          {/* Lazy-loaded mind map */}
+          {mindMapMounted && (
+            <Suspense fallback={null}>
+              <CareerMindMap 
+                nodes={nodes} 
+                pattern={career.pattern}
+                visible={showMindMap} 
+                isMobile={isMobile} 
+              />
+            </Suspense>
+          )}
+
+          <div className="relative p-8 h-full flex flex-col justify-between">
+            <div>
+              {/* Featured Label */}
+              {index === 0 && (
+                <span
+                  className="inline-flex items-center gap-2 text-micro font-medium mb-4 px-2 py-1 rounded-4"
+                  style={{
+                    background: 'transparent',
+                    color: '#d0d6e0',
+                    border: '0.5px solid rgba(255, 255, 255, 0.12)'
+                  }}
+                >
+                  Featured Path
+                </span>
+              )}
+              
+              {/* Icon with subtle glow */}
+              <div className="relative mb-6">
+                <motion.div 
+                  className="absolute inset-0"
+                  style={{
+                    background: 'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.08) 0%, transparent 60%)',
+                    filter: 'blur(20px)',
+                  }}
+                  animate={{ 
+                    scale: isHovered ? 1.2 : 1,
+                    opacity: isHovered ? 1 : 0.5
+                  }}
+                  transition={{
+                    type: "spring",
+                    damping: 20,
+                    stiffness: 200
+                  }}
+                />
+                <motion.div
+                  className="relative"
+                  animate={{ 
+                    scale: isHovered ? 1.05 : 1
+                  }}
+                  transition={{
+                    type: "spring",
+                    damping: 20,
+                    stiffness: 200
+                  }}
+                  style={{ color: 'rgba(255, 255, 255, 0.8)' }}
+                >
+                  {career.icon}
+                </motion.div>
+              </div>
+              
+              <motion.h3 
+                className="text-title-2 font-semibold mb-3"
+                style={{ 
+                  letterSpacing: '-.012em',
+                  color: '#f7f8f8'
+                }}
+                animate={{
+                  y: isHovered ? -20 : 0
+                }}
+                transition={{
+                  y: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }
+                }}
+              >
+                {career.title}
+              </motion.h3>
+              
+              <motion.p 
+                className="text-regular mb-6"
+                style={{ color: '#d0d6e0' }}
+                animate={{
+                  y: isHovered ? 10 : 0,
+                  opacity: isHovered ? 0.5 : 1
+                }}
+                transition={{
+                  duration: 0.5,
+                  ease: [0.25, 0.46, 0.45, 0.94]
+                }}
+              >
+                {career.subtitle}
+              </motion.p>
+            </div>
+
+            {/* Arrow with enhanced animation */}
+            <motion.div 
+              className="flex items-center gap-2 text-small font-medium"
+              animate={{ 
+                x: isHovered ? 6 : 0,
+                opacity: isHovered ? 0.5 : 1
+              }}
+              transition={{
+                duration: 0.5,
+                ease: [0.25, 0.46, 0.45, 0.94]
+              }}
+              style={{ color: 'rgba(255, 255, 255, 0.7)' }}
+            >
+              <span>Explore path</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="m9 18 6-6-6-6"/>
+              </svg>
+            </motion.div>
+          </div>
+        </LinearCard>
+
+        {/* Soft inner shadow on hover */}
+        <motion.div
+          className="absolute inset-0 pointer-events-none rounded-12"
+          style={{
+            boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.2)'
+          }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: isHovered ? 1 : 0 }}
+          transition={{
+            duration: 0.4,
+            ease: [0.25, 0.46, 0.45, 0.94]
+          }}
+        />
+      </motion.div>
+    );
   };
 
   return (
-    <div className="min-h-screen w-full transition-all duration-500 professional-background theme-text-primary pt-20 dark">
-      {/* Enhanced Creative Background System */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-gray-950"></div>
-      </div>
-      
-      <div className="relative z-10">
-        {/* Hero Section with 3D enhancements */}
-        <section className="hero-section relative z-10 overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32">
-            <div className="text-center">
+    <div className="min-h-screen bg-bg-primary text-text-primary">
+      {/* Hero Section - Balanced Linear Composition */}
+      <section ref={heroRef} className="relative" style={{ minHeight: '135vh', paddingTop: '64px', paddingBottom: '80px', background: '#08090a', overflow: 'hidden' }}>
+        <div className="w-full h-full flex flex-col justify-center">
+          {/* Top: Text Content - Max 32-35vh, tight composition */}
+          <div className="flex-shrink-0" style={{ height: '32vh', paddingTop: '6vh' }}>
+            <div className="w-full px-6">
+              <div style={{ maxWidth: 'clamp(600px, 60vw, 720px)', margin: '0 auto', textAlign: 'center' }}>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: animationStage >= 1 ? 1 : 0, y: animationStage >= 1 ? 0 : 20 }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-                className="mb-6"
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
               >
-                <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                  <svg className="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clipRule="evenodd" />
-                  </svg>
-                  Career Guidance Redefined
-                </span>
-              </motion.div>
-              
               <motion.h1 
-                className="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-6"
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: animationStage >= 2 ? 1 : 0, y: animationStage >= 2 ? 0 : 30 }}
-                transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-              >
-                <span className="block">Discover Your</span>
-                <span className="block bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                  Perfect Career Path
-                </span>
+                  className="font-semibold mb-4"
+                  style={{
+                    fontSize: 'clamp(2.5rem, 5vw, 4rem)',
+                    lineHeight: '1.15',
+                    letterSpacing: '-.022em',
+                    color: '#f7f8f8',
+                    fontWeight: 590
+                  }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: animationStage >= 1 ? 1 : 0, y: animationStage >= 1 ? 0 : 20 }}
+                  transition={{ duration: 0.6, delay: 0, ease: [0.25, 0.46, 0.45, 0.94] }}
+                >
+                  Career guidance that moves at your pace
               </motion.h1>
               
               <motion.p 
-                className="max-w-3xl mx-auto text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-12"
+                  className="mb-10"
+                  style={{ 
+                    lineHeight: '1.6', 
+                    color: '#8a8f98',
+                    fontSize: 'clamp(1rem, 1.5vw, 1.25rem)',
+                    maxWidth: '580px',
+                    margin: '0 auto',
+                    fontWeight: 400
+                  }}
                 initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: animationStage >= 3 ? 1 : 0, y: animationStage >= 3 ? 0 : 20 }}
-                transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
+                animate={{ opacity: animationStage >= 2 ? 1 : 0, y: animationStage >= 2 ? 0 : 20 }}
+                  transition={{ duration: 0.6, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
               >
-                Explore thousands of career opportunities tailored to your interests and skills. 
-                Find the path that aligns with your passion and potential.
+                  AI-powered roadmaps, personalized learning paths, and progress tracking—everything you need to transition from student to professional.
               </motion.p>
               
-              {/* Enhanced Search Bar with 3D effects */}
-              <motion.div 
-                className="max-w-2xl mx-auto mb-16"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: animationStage >= 4 ? 1 : 0, y: animationStage >= 4 ? 0 : 20 }}
-                transition={{ duration: 0.8, delay: 0.6, ease: "easeOut" }}
-              >
-                <SearchBar />
-              </motion.div>
-
-              {/* Quick Select Domains with 3D cards */}
-              <motion.div 
-                className="mb-16"
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 1.0 }}
-              >
-                <h2 className="text-2xl md:text-3xl font-bold mb-8">Popular Career Paths</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {quickSelectDomains.map((item, index) => (
-                    <motion.div
-                      key={index}
-                      className="p-6 rounded-2xl cursor-pointer transition-all duration-300 hover:scale-105 theme-card hover:shadow-xl professional-card hover-lift animate-fadeIn floating-card interactive-glow h-full flex flex-col"
-                      onClick={() => handleQuickSelect(item)}
-                      whileHover={{ 
-                        y: -10,
-                        rotateX: 5,
-                        rotateY: 5,
-                        scale: 1.02
-                      }}
-                      whileTap={{ scale: 0.98 }}
-                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                      style={{
-                        transformStyle: 'preserve-3d',
-                        perspective: '1000px'
-                      }}
-                    >
-                      <div className="flex-grow">
-                        <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
-                        <p className="theme-text-secondary text-sm">Specialization: {item.field}</p>
-                      </div>
-                      <div className="mt-4">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                          Quick Explore
-                        </span>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-              
-              {/* Direct Navigation Button */}
-              <motion.div 
-                className="mb-16 flex justify-center"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 1.2 }}
-              >
-                <Enhanced3DButton 
-                  onClick={scrollToCareerSelection}
-                  className="animate-interactiveGlow"
-                  size="lg"
-                  variant="primary"
+                <motion.div 
+                  className="flex items-center justify-center gap-3"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: animationStage >= 3 ? 1 : 0 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
                 >
-                  Explore More
-                </Enhanced3DButton>
+                  <LinearButton
+                    variant="primary"
+                    size="large"
+                    onClick={() => scrollToSection('explore')}
+                  >
+                    Get started
+                  </LinearButton>
+                  <LinearButton
+                    variant="secondary"
+                    size="large"
+                    onClick={() => navigate('/career-path')}
+                  >
+                    Explore careers
+                  </LinearButton>
+                </motion.div>
               </motion.div>
             </div>
           </div>
           
-        </section>
+          {/* Generous Gap - 12vh breathing room */}
+          <div style={{ height: '12vh' }}></div>
 
-        {/* Career Selection Section with Tabbed Interface */}
-        <section id="choose-interest-area" className="py-16 px-4 md:px-8 relative z-10 bg-gradient-to-b from-transparent to-gray-100/50 dark:to-gray-900/50 mt-[-2rem]">
-          <div className="max-w-7xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
+          {/* Bottom: Cinematic Tilted Preview Visual - Linear Style */}
+          <div 
+            className="flex-1 relative flex items-start justify-center" 
+            style={{ 
+              width: '100%',
+              perspective: '2000px',
+              perspectiveOrigin: '50% 50%',
+            }}
+          >
+            {/* Cinematic Vignette - Dramatic lighting */}
+            <div 
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: 'radial-gradient(ellipse 120% 100% at 50% 40%, transparent 0%, rgba(0, 0, 0, 0.3) 35%, rgba(0, 0, 0, 0.95) 100%)',
+                zIndex: 1,
+              }}
+            />
+
+            {/* Soft Shadow beneath mockup */}
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                left: '50%',
+                top: '30%',
+                width: '60%',
+                height: '50%',
+                transform: 'translateX(-50%)',
+                background: 'radial-gradient(ellipse at center, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.3) 35%, transparent 75%)',
+                filter: 'blur(50px)',
+                zIndex: 0,
+              }}
+            />
+            
+            {/* Neutral Ambient Light Diffusion */}
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                left: '50%',
+                top: '40%',
+                width: '70%',
+                height: '70%',
+                transform: 'translateX(-50%)',
+                background: 'radial-gradient(ellipse at center, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 30%, transparent 70%)',
+                filter: 'blur(70px)',
+                zIndex: 2,
+              }}
+            />
+
+            {/* Mockup Container - Cinematic with Floating Animation */}
+            <motion.div 
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ 
+                opacity: 1, 
+                y: [0, -2, 0],
+              }}
+              transition={{ 
+                opacity: { duration: 0.8, delay: 0.3 },
+                y: {
+                  duration: 4,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 1.2
+                }
+              }}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              className="relative"
+              style={{ 
+                width: '68%',
+                maxWidth: '1200px',
+                height: '48vh',
+                minHeight: '480px',
+                zIndex: 10,
+                transformStyle: 'preserve-3d',
+                willChange: 'transform, opacity, filter',
+              }}
+            >
+              {/* Dramatic 3D Interface Container - "Sleeping" Perspective */}
+                <motion.div
+                initial={{ 
+                  opacity: 0,
+                  scale: 0.95,
+                }}
+                animate={{ 
+                  opacity: heroOpacity,
+                  scale: isHovered ? 1.01 : 1,
+                }}
+                transition={{ 
+                  opacity: {
+                    duration: 0.8,
+                    delay: 0.4
+                  },
+                  scale: {
+                    duration: 0.4,
+                    ease: [0.25, 0.46, 0.45, 0.94]
+                  }
+                }}
+                  style={{
+                    transformStyle: 'preserve-3d',
+                  transformOrigin: 'center center',
+                  width: '100%',
+                  height: '100%',
+                  position: 'relative',
+                  filter: `blur(${heroBlur}px)`,
+                  transform: isHovered 
+                    ? 'rotateX(10deg) rotateY(-4deg) translateZ(8px)' 
+                    : 'rotateX(10deg) rotateY(-4deg)',
+                  transition: 'transform 0.6s cubic-bezier(.25, .46, .45, .94)',
+                  willChange: 'transform, opacity, filter',
+                }}
+                className="relative"
+              >
+                {/* Soft white ambient glow */}
+                <div
+                  className="absolute pointer-events-none rounded-12"
+                    style={{
+                    inset: '-40px',
+                    background: 'radial-gradient(ellipse at center, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.06) 40%, transparent 75%)',
+                    filter: 'blur(80px)',
+                    zIndex: -1,
+                  }}
+                />
+
+                {/* Main Interface Container - Enhanced Depth & Glow */}
+                <div
+                  className="h-full rounded-12 overflow-hidden"
+                  style={{
+                    background: '#08090a',
+                    border: '0.5px solid rgba(55, 57, 58, 0.8)',
+                    boxShadow: `
+                      0 60px 120px rgba(0, 0, 0, 0.9),
+                      0 20px 60px rgba(0, 0, 0, 0.4),
+                      0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+                      0 1px 1px rgba(255, 255, 255, 0.06) inset
+                    `,
+                    position: 'relative',
+                  }}
+                >
+                  {/* Soft white screen glow */}
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      background: 'radial-gradient(ellipse 100% 80% at 50% 25%, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 30%, transparent 70%)',
+                      borderRadius: '12px',
+                    }}
+                  />
+
+                  {/* Minimal Header */}
+                  <div 
+                    className="px-8 py-4 border-b flex items-center justify-between relative z-10"
+                    style={{ 
+                      borderColor: '#37393a',
+                      background: 'transparent',
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-small font-semibold" style={{ color: '#f7f8f8' }}>Dashboard</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: '#8a8f98' }}>
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                      </svg>
+                      <span className="text-micro" style={{ color: '#8a8f98' }}>Just now</span>
+                    </div>
+                  </div>
+
+                  {/* Realistic Dashboard Content - Two Panel Layout */}
+                  <div className="h-full flex p-8 relative" style={{ height: 'calc(100% - 64px)' }}>
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.8, duration: 0.6 }}
+                      className="h-full flex gap-6 w-full"
+                    >
+                      {/* Left Panel - Career Progress Overview */}
+                      <div className="flex-1 flex flex-col">
+                        <div className="mb-4">
+                          <h3 className="text-large font-semibold mb-1" style={{ color: '#f7f8f8' }}>Career Progress</h3>
+                          <p className="text-micro" style={{ color: '#8a8f98' }}>Software Engineering Path</p>
+                        </div>
+
+                        {/* Circular Progress Indicator */}
+                        <div className="flex items-center justify-center mb-6" style={{ minHeight: '200px' }}>
+                          <div className="relative" style={{ width: '180px', height: '180px' }}>
+                            {/* Background Circle */}
+                            <svg width="180" height="180" viewBox="0 0 180 180" className="absolute">
+                              <circle
+                                cx="90" cy="90"
+                                r="80"
+                                fill="none"
+                                stroke="#23252a"
+                                strokeWidth="8"
+                              />
+                            </svg>
+                            {/* Animated Progress Circle */}
+                            <svg width="180" height="180" viewBox="0 0 180 180" className="absolute transform -rotate-90">
+                              <motion.circle
+                                cx="90" cy="90"
+                                r="80"
+                                fill="none"
+                                stroke="#7170ff"
+                                strokeWidth="8"
+                                strokeLinecap="round"
+                                strokeDasharray={502.4}
+                                initial={{ strokeDashoffset: 502.4 }}
+                                animate={{ strokeDashoffset: 502.4 * (1 - 0.72) }}
+                                transition={{ duration: 1.8, delay: 1.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+                              />
+                            </svg>
+                            {/* Center Text */}
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                              <motion.span
+                                className="text-title-3 font-semibold"
+                                style={{ color: '#f7f8f8' }}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 1.8 }}
+                              >
+                                72%
+                              </motion.span>
+                              <span className="text-micro" style={{ color: '#8a8f98' }}>Complete</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Next Milestone */}
+                        <div className="p-4 rounded-8" style={{ background: '#1c1c1f', border: '0.5px solid #23252a' }}>
+                          <div className="flex items-center gap-2 mb-2">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: '#7170ff' }}>
+                              <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                            <span className="text-small font-medium" style={{ color: '#d0d6e0' }}>Next milestone</span>
+                          </div>
+                          <p className="text-micro" style={{ color: '#f7f8f8' }}>Build Portfolio Project</p>
+                          <p className="text-micro mt-1" style={{ color: '#8a8f98' }}>Due in 3 days</p>
+                        </div>
+                      </div>
+
+                      {/* Divider */}
+                      <div style={{ width: '0.5px', background: '#23252a' }}></div>
+
+                      {/* Right Panel - Recent Activity */}
+                      <div className="flex-1 flex flex-col">
+                        <div className="mb-4">
+                          <h3 className="text-large font-semibold mb-1" style={{ color: '#f7f8f8' }}>Recent Activity</h3>
+                          <p className="text-micro" style={{ color: '#8a8f98' }}>Your learning updates</p>
+                        </div>
+
+                        <div className="space-y-2 flex-1">
+                          {[
+                            { status: 'completed', title: 'React Roadmap', item: 'Completed', color: '#7170ff' },
+                            { status: 'new', title: 'New Skill Added', item: 'Python', color: '#22c55e' },
+                            { status: 'active', title: 'Started', item: 'ML Basics', color: '#f97316' },
+                            { status: 'completed', title: 'Node.js Fundamentals', item: 'Completed', color: '#7170ff' }
+                          ].map((activity, i) => (
+                            <motion.div
+                              key={i}
+                              initial={{ opacity: 0, x: 10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: 1.4 + i * 0.05, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+                              className="flex items-center gap-3 p-3 rounded-8 hover:bg-bg-tertiary transition-colors cursor-pointer"
+                              style={{ border: '0.5px solid transparent' }}
+                            >
+                              {/* Status Indicator */}
+                              <div 
+                                className="w-2 h-2 rounded-full flex-shrink-0"
+                                style={{ background: activity.color, boxShadow: `0 0 6px ${activity.color}40` }}
+                              ></div>
+                              
+                              {/* Content */}
+                              <div className="flex-grow min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-small font-medium" style={{ color: '#f7f8f8' }}>{activity.title}</span>
+                                </div>
+                                <div className="text-micro" style={{ color: '#d0d6e0' }}>{activity.item}</div>
+                              </div>
+
+                              {/* Status Icon */}
+                              <div className="flex-shrink-0">
+                                {activity.status === 'completed' ? (
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: '#7170ff' }}>
+                                    <polyline points="20 6 9 17 4 12"/>
+                                  </svg>
+                                ) : activity.status === 'new' ? (
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: '#22c55e' }}>
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <line x1="12" y1="8" x2="12" y2="16"/>
+                                    <line x1="8" y1="12" x2="16" y2="12"/>
+                                  </svg>
+                                ) : (
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: '#f97316' }}>
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <polyline points="12 6 12 12 16 14"/>
+                                  </svg>
+                                )}
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  </div>
+                </div>
+                </motion.div>
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works Section - Full Viewport */}
+      <section className="relative flex items-center border-t border-border-primary" style={{ minHeight: '100vh' }}>
+        <div className="w-full px-6 py-24">
+          <div className="max-w-6xl mx-auto">
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
               className="text-center mb-12"
             >
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                Find Your Perfect Career
+              <h2 
+                className="text-title-5 font-semibold mb-4 text-white"
+                style={{ letterSpacing: '-.022em' }}
+              >
+                How it works
               </h2>
-              <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-                Navigate through our comprehensive career exploration system to discover paths that match your interests
+              <p className="text-large text-text-secondary max-w-2xl mx-auto">
+                Three simple steps to accelerate your career journey
+              </p>
+            </motion.div>
+
+            <div className="grid md:grid-cols-3 gap-12">
+              {[
+                {
+                  step: '01',
+                  title: 'Choose your path',
+                  description: 'Select from hundreds of career paths across technology, healthcare, business, and more',
+                  icon: (
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <polygon points="10 8 16 12 10 16 10 8"/>
+                    </svg>
+                  )
+                },
+                {
+                  step: '02',
+                  title: 'Get your roadmap',
+                  description: 'Receive a personalized learning roadmap with milestones, resources, and timelines',
+                  icon: (
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
+                  )
+                },
+                {
+                  step: '03',
+                  title: 'Track progress',
+                  description: 'Monitor your growth with interactive flowcharts and achievement tracking',
+                  icon: (
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="22 11 12 2 2 11"/>
+                      <path d="M2 11v10a1 1 0 001 1h5"/>
+                      <path d="M22 21v-10l-10-9"/>
+                    </svg>
+                  )
+                }
+              ].map((item, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ 
+                    delay: index * 0.15, 
+                    duration: 0.5,
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 25
+                  }}
+                >
+                  <div className="text-accent-hover mb-6">
+                    {item.icon}
+                  </div>
+                  <div 
+                    className="text-micro font-semibold mb-3 text-text-quaternary"
+                    style={{ letterSpacing: '0.05em' }}
+                  >
+                    {item.step}
+                  </div>
+                  <h3 className="text-title-2 font-semibold mb-3 text-white" style={{ letterSpacing: '-.012em' }}>
+                    {item.title}
+                  </h3>
+                  <p className="text-regular text-text-secondary leading-relaxed">
+                    {item.description}
+                  </p>
+              </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
+        </section>
+
+      {/* Popular Careers Section - Cinematic Storytelling Layout */}
+      <section 
+        id="explore"
+        className="relative border-t border-border-primary" 
+        style={{ minHeight: '100vh', paddingBottom: '0' }}
+      >
+        {/* Neutral Ambient Background */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div 
+            className="absolute"
+            style={{
+              left: '50%',
+              top: '50%',
+              width: '80%',
+              height: '80%',
+              transform: 'translate(-50%, -50%)',
+              background: 'radial-gradient(ellipse at center, rgba(255, 255, 255, 0.03) 0%, transparent 70%)',
+              filter: 'blur(100px)',
+            }}
+          />
+        </div>
+
+        <div className="w-full px-6 py-24 relative z-10">
+          <div className="max-w-7xl mx-auto">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="text-center mb-16"
+            >
+              <h2 
+                className="text-title-5 font-semibold mb-4 text-white"
+                style={{ letterSpacing: '-.022em' }}
+              >
+                Popular career paths
+              </h2>
+              <p className="text-large text-text-secondary max-w-2xl mx-auto">
+                Explore in-demand careers with personalized learning roadmaps
+              </p>
+            </motion.div>
+
+            {/* Horizontal Scroll Container with Snap */}
+            <div 
+              ref={carouselRef}
+              className="overflow-x-auto pb-12"
+              style={{
+                scrollSnapType: 'x mandatory',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none'
+              }}
+            >
+              {/* Hide scrollbar */}
+              <style>{`
+                .overflow-x-auto::-webkit-scrollbar {
+                  display: none;
+                }
+              `}</style>
+              
+              {/* Cards Container */}
+              <div className="flex gap-6" style={{ minWidth: 'max-content' }}>
+                {popularCareers.map((career, index) => (
+                  <div key={index} style={{ flex: '0 0 auto', width: 'calc(50vw - 48px)', minWidth: '400px' }}>
+                    <CareerScene 
+                      career={career} 
+                      index={index}
+                      onSelect={handleQuickSelect}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Interactive Scroll Controls & Explore More */}
+            <motion.div 
+              className="flex items-center justify-center gap-8 mt-12"
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+            >
+              {/* Scroll Indicator */}
+              <div className="flex items-center gap-2">
+                {popularCareers.map((_, i) => (
+                  <motion.button
+                    key={i}
+                    className="h-1 rounded-full transition-all cursor-pointer focus:outline-none"
+                    animate={{
+                      width: i === activeCareerIndex ? 32 : 8,
+                      background: i === activeCareerIndex ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.08)'
+                    }}
+                    whileHover={{ 
+                      scale: 1.2,
+                      background: 'rgba(255,255,255,0.3)'
+                    }}
+                    whileTap={{ scale: 0.95 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 20
+                    }}
+                    onClick={() => {
+                      if (carouselRef.current) {
+                        const cardWidth = carouselRef.current.scrollWidth / popularCareers.length;
+                        carouselRef.current.scrollTo({ left: cardWidth * i, behavior: 'smooth' });
+                      }
+                    }}
+                  />
+                ))}
+              </div>
+
+              {/* Divider */}
+              <div className="h-px w-16 bg-border-primary" />
+
+              {/* Explore More Button */}
+              <motion.button
+                onClick={() => {
+                  const categorySection = document.getElementById('category-explorer');
+                  if (categorySection) {
+                    categorySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }}
+                className="flex items-center gap-2 text-small font-medium text-text-secondary hover:text-text-primary transition-colors group focus:outline-none"
+                whileHover={{ gap: '8px' }}
+                transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+              >
+                <span>Explore more categories</span>
+                <motion.svg 
+                  width="16" 
+                  height="16" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2"
+                  className="text-text-tertiary group-hover:text-text-primary transition-colors"
+                  animate={{ x: [0, 4, 0] }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                >
+                  <path d="m9 18 6-6-6-6"/>
+                </motion.svg>
+              </motion.button>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Category Explorer Section - Full Viewport */}
+      <section id="category-explorer" className="relative flex items-center border-t border-border-primary" style={{ minHeight: '100vh' }}>
+        <div className="w-full px-6 py-24">
+          <div className="max-w-6xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="text-center mb-12"
+            >
+              <h2 className="text-title-4 font-semibold mb-4 text-white" style={{ letterSpacing: '-.022em' }}>
+                Explore by category
+              </h2>
+              <p className="text-regular text-text-secondary">
+                Navigate through our comprehensive career system
               </p>
             </motion.div>
             
-            {/* Progress Indicator */}
-            <div className="mb-12">
-              <div className="flex justify-center">
-                <div className="flex items-center">
-                  {['categories', 'fields', 'specializations'].map((step, index) => (
+            {/* Progress Steps */}
+            <div className="flex justify-center mb-12">
+              <div className="flex items-center gap-2">
+                {['categories', 'fields', 'specializations'].map((step, index) => {
+                  const isActive = activeTab === step;
+                  const isCompleted = 
+                    (activeTab === 'fields' && step === 'categories') ||
+                    (activeTab === 'specializations' && (step === 'categories' || step === 'fields'));
+                  
+                  return (
                     <div key={step} className="flex items-center">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg transition-all duration-300 ${
-                        activeTab === step 
-                          ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg scale-110' 
-                          : activeTab === 'fields' && step === 'categories'
-                          ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white' 
-                          : activeTab === 'specializations' && (step === 'categories' || step === 'fields')
-                          ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
-                          : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-                      }`}>
+                      <motion.div
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-micro font-semibold"
+                        style={{
+                          background: isActive || isCompleted ? 'var(--color-brand-bg)' : 'var(--color-bg-tertiary)',
+                          color: isActive || isCompleted ? 'white' : 'var(--color-text-tertiary)',
+                          transition: 'all 0.16s cubic-bezier(.25, .46, .45, .94)',
+                        }}
+                        whileHover={{ scale: 1.05 }}
+                      >
                         {index + 1}
-                      </div>
+                      </motion.div>
                       {index < 2 && (
-                        <div className={`w-16 h-1.5 mx-2 rounded-full transition-all duration-300 ${
-                          activeTab === 'fields' && step === 'categories'
-                            ? 'bg-gradient-to-r from-green-500 to-emerald-600'
-                            : activeTab === 'specializations' && (step === 'categories' || step === 'fields')
-                            ? 'bg-gradient-to-r from-green-500 to-emerald-600'
-                            : 'bg-gray-200 dark:bg-gray-700'
-                        }`}></div>
+                        <div 
+                          className="w-12 h-0.5 mx-2"
+                          style={{
+                            background: isCompleted ? 'var(--color-brand-bg)' : 'var(--color-border-primary)',
+                            transition: 'background 0.16s cubic-bezier(.25, .46, .45, .94)',
+                          }}
+                        />
                       )}
                     </div>
-                  ))}
-                </div>
-              </div>
-              <div className="flex justify-center mt-6">
-                <div className="text-center flex space-x-8">
-                  <span className={`text-sm font-bold px-4 py-2 rounded-full transition-all duration-300 ${
-                    activeTab === 'categories' 
-                      ? 'bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 dark:from-blue-900/50 dark:to-indigo-900/50 dark:text-blue-200 shadow-md' 
-                      : 'text-gray-500 dark:text-gray-400'
-                  }`}>
-                    Categories
-                  </span>
-                  <span className={`text-sm font-bold px-4 py-2 rounded-full transition-all duration-300 ${
-                    activeTab === 'fields' 
-                      ? 'bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 dark:from-blue-900/50 dark:to-indigo-900/50 dark:text-blue-200 shadow-md' 
-                      : activeTab === 'specializations' && selectedField
-                      ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 dark:from-green-900/50 dark:to-emerald-900/50 dark:text-green-200 shadow-md'
-                      : 'text-gray-500 dark:text-gray-400'
-                  }`}>
-                    Fields
-                  </span>
-                  <span className={`text-sm font-bold px-4 py-2 rounded-full transition-all duration-300 ${
-                    activeTab === 'specializations' 
-                      ? 'bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 dark:from-blue-900/50 dark:to-indigo-900/50 dark:text-blue-200 shadow-md' 
-                      : 'text-gray-500 dark:text-gray-400'
-                  }`}>
-                    Specializations
-                  </span>
-                </div>
+                  );
+                })}
               </div>
             </div>
             
             {/* Tab Content */}
-            <div className="relative">
               <AnimatePresence mode="wait">
-                {/* Categories Tab */}
                 {activeTab === 'categories' && (
                   <motion.div
                     key="categories"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ duration: 0.3 }}
-                  >
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
+                >
+                  {categories.map((category, index) => (
                     <motion.div 
-                      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6"
-                      variants={containerVariants}
-                      initial="hidden"
-                      animate="visible"
+                      key={category.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.03 }}
                     >
-                      {categories.map((category) => (
-                        <motion.div
-                          key={category.id}
-                          className="p-6 rounded-2xl cursor-pointer transition-all duration-300 hover:scale-105 theme-card hover:shadow-xl professional-card hover-lift gradient-border interactive-glow-primary h-full flex flex-col enhanced-card-hover backdrop-blur-sm dark:bg-gray-800/50 dark:border-gray-700/50"
+                      <LinearCard
                           onClick={() => handleCategorySelect(category.id)}
-                          variants={itemVariants}
-                          whileHover={{ 
-                            y: -10,
-                            rotateX: 5,
-                            rotateY: 5,
-                            scale: 1.02
-                          }}
-                          whileTap={{ scale: 0.98 }}
-                          transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                          style={{
-                            transformStyle: 'preserve-3d',
-                            perspective: '1000px'
-                          }}
-                        >
-                          <div className="flex-grow flex flex-col items-center text-center">
-                            <div className="text-4xl mb-4 bg-gradient-to-r from-blue-500 to-indigo-600 bg-clip-text text-transparent">{category.icon}</div>
-                            <h3 className="text-xl font-bold mb-3">{category.name}</h3>
-                            <p className="theme-text-secondary text-sm mb-4">{category.description}</p>
+                        className="p-4 cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl">{category.icon}</span>
+                          <div className="flex-grow">
+                            <div className="text-small font-medium text-text-primary">
+                              {category.name}
+                            </div>
+                            <div className="text-micro text-text-tertiary">
+                              {category.description}
+                            </div>
                           </div>
-                          <div className="mt-auto">
-                            <Enhanced3DButton 
-                              size="sm" 
-                              variant="secondary"
-                              className="w-full"
-                            >
-                              Explore
-                            </Enhanced3DButton>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-quaternary">
+                            <path d="m9 18 6-6-6-6" />
+                          </svg>
                           </div>
+                      </LinearCard>
                         </motion.div>
                       ))}
-                    </motion.div>
                   </motion.div>
                 )}
                 
-                {/* Fields Tab */}
                 {activeTab === 'fields' && (
                   <motion.div
                     key="fields"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-                      <div className="flex items-center">
-                        <button
-                          onClick={resetSelection}
-                          className="flex items-center text-blue-600 dark:text-blue-400 hover:underline"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-                          </svg>
-                          Back to Categories
-                        </button>
-                        <div className="ml-4 px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">
-                          Selected: {categories.find(c => c.id === selectedCategory)?.name}
-                        </div>
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="mb-6 text-center">
+                    <LinearButton variant="ghost" size="small" onClick={resetSelection}>
+                      ← Back to categories
+                    </LinearButton>
                       </div>
                       
-                      <div className="relative w-full md:w-64 enhanced-gradient-border rounded-xl">
-                        <input
-                          type="text"
-                          placeholder="Filter fields..."
-                          className="w-full p-3 pl-10 rounded-xl border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 absolute left-3 top-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                      </div>
-                    </div>
-                    
-                    <motion.div 
-                      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-                      variants={containerVariants}
-                      initial="hidden"
-                      animate="visible"
-                    >
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {fields.map((field, index) => (
                         <motion.div
                           key={index}
-                          className="p-6 rounded-2xl cursor-pointer transition-all duration-300 hover:scale-105 theme-card hover:shadow-xl professional-card hover-lift gradient-border interactive-glow-primary h-full flex flex-col enhanced-card-hover backdrop-blur-sm dark:bg-gray-800/50 dark:border-gray-700/50"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                      >
+                        <LinearCard
                           onClick={() => handleFieldSelect(field)}
-                          variants={itemVariants}
-                          whileHover={{ 
-                            y: -10,
-                            rotateX: 5,
-                            rotateY: 5,
-                            scale: 1.02
-                          }}
-                          whileTap={{ scale: 0.98 }}
-                          transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                          style={{
-                            transformStyle: 'preserve-3d',
-                            perspective: '1000px'
-                          }}
+                          className="p-4 cursor-pointer"
                         >
-                          <div className="flex-grow">
-                            <h3 className="text-xl font-bold mb-3">{field}</h3>
-                            <p className="theme-text-secondary text-sm mb-4">
-                              {domainsByField[field]?.length || 0} Specializations Available
-                            </p>
+                          <div className="flex items-center justify-between">
+                            <span className="text-small font-medium text-text-primary">{field}</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-quaternary">
+                              <path d="m9 18 6-6-6-6" />
+                            </svg>
                           </div>
-                          <div className="mt-4">
-                            <div className="flex flex-wrap gap-1 mb-4">
-                              {domainsByField[field]?.slice(0, 3).map((domain, idx) => (
-                                <span key={idx} className="inline-block px-2 py-1 text-xs rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200">
-                                  {domain}
-                                </span>
-                              ))}
-                              {domainsByField[field]?.length > 3 && (
-                                <span className="inline-block px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
-                                  +{domainsByField[field].length - 3} more
-                                </span>
-                              )}
-                            </div>
-                            <Enhanced3DButton 
-                              size="sm" 
-                              variant="secondary"
-                              className="w-full"
-                            >
-                              Select Field
-                            </Enhanced3DButton>
-                          </div>
+                        </LinearCard>
                         </motion.div>
                       ))}
-                    </motion.div>
+                  </div>
                   </motion.div>
                 )}
                 
-                {/* Specializations Tab */}
                 {activeTab === 'specializations' && (
                   <motion.div
                     key="specializations"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-                      <div className="flex items-center">
-                        <button
-                          onClick={resetSelection}
-                          className="flex items-center text-blue-600 dark:text-blue-400 hover:underline"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="mb-6 text-center">
+                    <LinearButton variant="ghost" size="small" onClick={() => setActiveTab('fields')}>
+                      ← Back to fields
+                    </LinearButton>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {domains.map((domain, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                      >
+                        <LinearCard
+                          onClick={() => handleDomainSelect(domain)}
+                          className="p-4 cursor-pointer"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-                          </svg>
-                          Back to Categories
-                        </button>
-                        <div className="ml-4 px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">
-                          Selected: {selectedField}
+                          <div className="flex items-center justify-between">
+                            <span className="text-small font-medium text-text-primary">{domain}</span>
+                            <LinearButton variant="ghost" size="mini">
+                              Explore
+                            </LinearButton>
+                          </div>
+                        </LinearCard>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
                         </div>
+      </section>
+
+      {/* Stats Section - Full Viewport */}
+      <section className="relative flex items-center border-t border-border-primary" style={{ minHeight: '100vh' }}>
+        <div className="w-full px-6 py-24">
+          <div className="max-w-6xl mx-auto">
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+              <motion.div
+                initial={{ opacity: 0, x: -40 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+              >
+                <h2 className="text-title-5 font-semibold mb-6 text-white" style={{ letterSpacing: '-.022em' }}>
+                  Trusted by students worldwide
+                </h2>
+                <p className="text-xl text-text-secondary mb-12 leading-relaxed">
+                  Join thousands of students who've discovered their perfect career path with our AI-powered guidance platform.
+                </p>
+
+                <div className="grid grid-cols-2 gap-8">
+                  {[
+                    { value: '50K+', label: 'Students guided' },
+                    { value: '200+', label: 'Career paths' },
+                    { value: '95%', label: 'Success rate' },
+                    { value: '24/7', label: 'AI assistance' }
+                  ].map((stat, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: index * 0.1, duration: 0.5 }}
+                    >
+                      <div className="text-title-4 font-semibold text-accent-hover mb-2">
+                        {stat.value}
                       </div>
-                      
-                      <div className="relative w-full md:w-64 enhanced-gradient-border rounded-xl">
-                        <input
-                          type="text"
-                          placeholder="Filter specializations..."
-                          className="w-full p-3 pl-10 rounded-xl border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 absolute left-3 top-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
+                      <div className="text-regular text-text-tertiary">
+                        {stat.label}
                       </div>
+                    </motion.div>
+                  ))}
                     </div>
+              </motion.div>
                     
                     <motion.div 
-                      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-                      variants={containerVariants}
-                      initial="hidden"
-                      animate="visible"
-                    >
-                      {domains.map((domain, index) => (
+                initial={{ opacity: 0, x: 40 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+                className="relative"
+              >
+                <div 
+                  className="rounded-12 p-8"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(113, 112, 255, 0.1), rgba(94, 106, 210, 0.05))',
+                    border: '0.5px solid rgba(113, 112, 255, 0.2)',
+                  }}
+                >
+                  <div className="space-y-6">
+                    {[
+                      { name: 'Alex Kumar', role: 'Software Engineer', feedback: 'Found my dream career in just 3 months!' },
+                      { name: 'Priya Singh', role: 'Data Scientist', feedback: 'The roadmap was exactly what I needed' },
+                      { name: 'Rahul Sharma', role: 'UI/UX Designer', feedback: 'Best career guidance platform out there' }
+                    ].map((testimonial, index) => (
                         <motion.div
                           key={index}
-                          className="p-6 rounded-2xl cursor-pointer transition-all duration-300 hover:scale-105 theme-card hover:shadow-xl professional-card hover-lift gradient-border interactive-glow-primary h-full flex flex-col enhanced-card-hover backdrop-blur-sm dark:bg-gray-800/50 dark:border-gray-700/50"
-                          onClick={() => handleDomainSelect(domain)}
-                          variants={itemVariants}
-                          whileHover={{ 
-                            y: -10,
-                            rotateX: 5,
-                            rotateY: 5,
-                            scale: 1.02
-                          }}
-                          whileTap={{ scale: 0.98 }}
-                          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                        initial={{ opacity: 0, x: 20 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: 0.2 + index * 0.1 }}
+                        className="p-4 rounded-8"
                           style={{
-                            transformStyle: 'preserve-3d',
-                            perspective: '1000px'
-                          }}
-                        >
-                          <div className="flex-grow">
-                            <h3 className="text-xl font-bold mb-3">{domain}</h3>
-                            <p className="theme-text-secondary text-sm">
-                              Specialization in {selectedField}
-                            </p>
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          border: '0.5px solid rgba(255, 255, 255, 0.05)'
+                        }}
+                      >
+                        <p className="text-small text-text-secondary mb-3">"{testimonial.feedback}"</p>
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-micro font-semibold"
+                            style={{ background: 'var(--color-brand-bg)', color: 'white' }}
+                          >
+                            {testimonial.name[0]}
                           </div>
-                          <div className="mt-4">
-                            <Enhanced3DButton 
-                              size="sm" 
-                              variant="secondary"
-                              className="w-full"
-                            >
-                              Select Specialization
-                            </Enhanced3DButton>
+                          <div>
+                            <div className="text-small font-medium text-text-primary">{testimonial.name}</div>
+                            <div className="text-micro text-text-tertiary">{testimonial.role}</div>
+                          </div>
                           </div>
                         </motion.div>
                       ))}
-                    </motion.div>
+                  </div>
+                </div>
                   </motion.div>
-                )}
-              </AnimatePresence>
+            </div>
             </div>
           </div>
         </section>
+
+      {/* Final CTA Section - Full Viewport */}
+      <section className="relative flex items-center border-t border-border-primary" style={{ minHeight: '100vh' }}>
+        <div className="w-full px-6 py-24">
+          <div className="max-w-4xl mx-auto text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              <h2 
+                className="text-title-6 font-semibold mb-6 text-white"
+                style={{ letterSpacing: '-.022em' }}
+              >
+                Ready to start your journey?
+              </h2>
+              <p className="text-xl text-text-secondary mb-12 max-w-2xl mx-auto leading-relaxed">
+                Join thousands of students discovering their perfect career path with personalized AI guidance
+              </p>
+
+              <div className="flex flex-wrap justify-center gap-4">
+                <LinearButton
+                  variant="primary"
+                  size="large"
+                  onClick={() => navigate('/career-path')}
+                >
+                  Explore careers
+                </LinearButton>
+                <LinearButton
+                  variant="secondary"
+                  size="large"
+                  onClick={() => scrollToSection('explore')}
+                >
+                  Learn more
+                </LinearButton>
+              </div>
+            </motion.div>
+          </div>
       </div>
+      </section>
     </div>
   );
 };

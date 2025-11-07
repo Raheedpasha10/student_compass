@@ -174,44 +174,81 @@ const SimplifiedUltimateRoadmap = () => {
               Learning path
                   </h2>
 
-            <div className="space-y-3">
+            <div className="space-y-4 relative">
+              {/* Connecting lines between phases */}
+              {displayRoadmap.learning_path?.map((phase, index) => {
+                const isLast = index === (displayRoadmap.learning_path?.length || 0) - 1;
+                return !isLast ? (
+                  <div
+                    key={`line-${index}`}
+                    className="absolute left-[32px]"
+                    style={{ top: `${(index + 1) * 100 - 16}%`, transform: 'translateY(100%)' }}
+                  >
+                    <motion.div
+                      className="w-0.5 h-16 bg-border-primary"
+                      initial={{ scaleY: 0 }}
+                      whileInView={{ scaleY: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.5, delay: index * 0.1 + 0.3 }}
+                      style={{ transformOrigin: 'top' }}
+                    />
+                  </div>
+                ) : null;
+              })}
+
               {displayRoadmap.learning_path?.map((phase, index) => (
                 <motion.div
                     key={index} 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05, duration: 0.3 }}
+                  transition={{ delay: index * 0.1, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  className="relative z-10"
                 >
-                  <LinearCard className="p-6">
+                  <LinearCard className="p-6 group">
                     <div className="flex items-start justify-between mb-4">
                       <div>
-                        <h3 className="text-regular font-semibold text-text-primary mb-1">
+                        <h3 className="text-regular font-semibold text-text-primary mb-1 group-hover:text-text-primary transition-colors">
                           {phase.phase}
                         </h3>
-                        <p className="text-small text-text-tertiary">
+                        <p className="text-small text-text-tertiary flex items-center gap-1.5">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                          </svg>
                           Duration: {phase.duration}
                         </p>
                       </div>
-                            <span 
-                        className="text-micro font-semibold px-2 py-1 rounded-6"
+                            <motion.span 
+                        className="text-micro font-semibold px-3 py-1 rounded-6 flex items-center gap-1.5"
                         style={{ 
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          color: 'var(--color-text-tertiary)'
+                          background: 'rgba(113, 112, 255, 0.15)',
+                          color: 'var(--color-accent-hover)'
                         }}
+                        whileHover={{ scale: 1.05 }}
+                        transition={{ duration: 0.2 }}
                       >
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent-hover"></span>
                         Phase {index + 1}
-                      </span>
+                      </motion.span>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                       {phase.topics?.map((topic, i) => (
-                        <div 
+                        <motion.div 
                           key={i}
-                          className="flex items-center gap-2 text-small text-text-secondary"
+                          className="flex items-center gap-2.5 text-small text-text-secondary group-hover:text-text-primary transition-colors"
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.1 + i * 0.05, duration: 0.3 }}
                         >
-                          <span className="w-1 h-1 rounded-full bg-accent"></span>
+                          <motion.span 
+                            className="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0"
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ delay: index * 0.1 + i * 0.05, type: "spring", stiffness: 500 }}
+                          ></motion.span>
                           {topic}
-                        </div>
+                        </motion.div>
                       ))}
                     </div>
                   </LinearCard>

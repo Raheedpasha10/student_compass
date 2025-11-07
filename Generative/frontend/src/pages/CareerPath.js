@@ -17,7 +17,15 @@ const CareerPath = () => {
   // Career data structure
   const careerPaths = {
     'Artificial Intelligence': {
-      icon: '🤖',
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="4" y="2" width="16" height="20" rx="2" ry="2"/>
+          <line x1="9" y1="6" x2="15" y2="6"/>
+          <line x1="9" y1="10" x2="15" y2="10"/>
+          <line x1="9" y1="14" x2="13" y2="14"/>
+          <circle cx="17" cy="18" r="2"/>
+        </svg>
+      ),
       description: 'Build intelligent systems that learn and adapt',
       averageSalary: '₹8,00,000 - ₹20,00,000',
       growthRate: '+43%',
@@ -40,7 +48,15 @@ const CareerPath = () => {
       ]
     },
     'Blockchain Technology': {
-      icon: '🔗',
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="3" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="14" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+          <path d="M10 6.5h4M10 17.5h4M6.5 10v4M17.5 10v4"/>
+        </svg>
+      ),
       description: 'Build decentralized systems and smart contracts',
       averageSalary: '₹6,00,000 - ₹15,00,000',
       growthRate: '+67%',
@@ -63,7 +79,11 @@ const CareerPath = () => {
       ]
     },
     'Cloud Computing': {
-      icon: '☁️',
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
+        </svg>
+      ),
       description: 'Build and manage scalable cloud infrastructure',
       averageSalary: '₹5,00,000 - ₹14,00,000',
       growthRate: '+29%',
@@ -86,7 +106,13 @@ const CareerPath = () => {
       ]
     },
     'Software Engineering': {
-      icon: '💻',
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+      ),
       description: 'Build the digital future with cutting-edge technology',
       averageSalary: '₹4,00,000 - ₹18,00,000',
       growthRate: '+22%',
@@ -108,7 +134,13 @@ const CareerPath = () => {
       ]
     },
     'Web Development': {
-      icon: '🌐',
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="2" y1="12" x2="22" y2="12"/>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+      ),
       description: 'Create dynamic websites and web applications',
       averageSalary: '₹3,00,000 - ₹10,00,000',
       growthRate: '+15%',
@@ -130,7 +162,12 @@ const CareerPath = () => {
       ]
     },
     'Mobile Development': {
-      icon: '📱',
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+          <line x1="12" y1="18" x2="12.01" y2="18"/>
+        </svg>
+      ),
       description: 'Build native and cross-platform mobile applications',
       averageSalary: '₹4,00,000 - ₹12,00,000',
       growthRate: '+19%',
@@ -217,7 +254,14 @@ const CareerPath = () => {
                 >
                   <div className="p-6">
                     <div className="flex items-start gap-4">
-                      <div className="text-3xl">{career.icon}</div>
+                      <motion.div 
+                        className="text-text-primary flex-shrink-0"
+                        style={{ color: 'var(--color-accent-hover)' }}
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+                      >
+                        {career.icon}
+                      </motion.div>
                       <div className="flex-grow">
                         <div className="flex items-start justify-between mb-2">
                           <div>
@@ -266,9 +310,14 @@ const CareerPath = () => {
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+                          transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
                           className="mt-6 pt-6 border-t border-border-translucent"
                         >
+                          <motion.div
+                            initial={{ y: -10, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ duration: 0.3, delay: 0.1 }}
+                          >
                           {/* Specializations */}
                           <div className="mb-6">
                             <h4 className="text-small font-semibold text-text-primary mb-3">Specializations</h4>
@@ -323,7 +372,12 @@ const CareerPath = () => {
                           </div>
 
                           {/* CTA */}
-                          <div className="pt-4">
+                          <motion.div 
+                            className="pt-4"
+                            initial={{ y: 10, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ duration: 0.3, delay: 0.2 }}
+                          >
                             <LinearButton
                               variant="primary"
                               size="default"
@@ -331,7 +385,8 @@ const CareerPath = () => {
                             >
                               Start learning path →
                             </LinearButton>
-                          </div>
+                          </motion.div>
+                          </motion.div>
                         </motion.div>
                       )}
                     </AnimatePresence>

@@ -200,26 +200,41 @@ const Flowchart = () => {
       <section className="py-12">
         <div className="linear-container">
           <div className="max-w-3xl">
-            <div className="space-y-6">
+            <div className="space-y-6 relative">
               {roadmapData?.roadmap?.map((step, index) => {
                 const isCompleted = completedSteps.has(index);
                 const isUnlocked = index === 0 || completedSteps.has(index - 1);
                 const isLocked = !isUnlocked;
+                const isLast = index === (roadmapData?.roadmap?.length || 0) - 1;
 
                 return (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.03, duration: 0.3 }}
-                  >
-                    <LinearCard 
-                      className={`p-6 ${isUnlocked ? 'cursor-pointer' : 'opacity-50'}`}
-                      onClick={() => isUnlocked && toggleStepCompletion(index)}
+                  <div key={index} className="relative">
+                    {/* Connecting Line */}
+                    {!isLast && (
+                      <div className="absolute left-[23px] top-[48px] bottom-[-24px] w-0.5 z-0" style={{ background: 'var(--color-border-primary)' }}>
+                        <motion.div
+                          className="absolute top-0 left-0 w-full h-full bg-accent"
+                          initial={{ scaleY: 0 }}
+                          animate={{ scaleY: isCompleted ? 1 : 0 }}
+                          transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+                          style={{ transformOrigin: 'top' }}
+                        />
+                      </div>
+                    )}
+                    
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.03, duration: 0.3 }}
+                      className="relative z-10"
                     >
-                      <div className="flex items-start gap-4">
-                        {/* Step Number/Checkbox */}
-                        <div className="flex-shrink-0 mt-1">
+                      <LinearCard 
+                        className={`p-6 ${isUnlocked ? 'cursor-pointer' : 'opacity-50'} relative`}
+                        onClick={() => isUnlocked && toggleStepCompletion(index)}
+                      >
+                        <div className="flex items-start gap-4">
+                          {/* Step Number/Checkbox */}
+                          <div className="flex-shrink-0 mt-1 relative z-10">
                           <motion.button
                             className={`
                               w-6 h-6 rounded-full flex items-center justify-center
@@ -304,14 +319,19 @@ const Flowchart = () => {
                           )}
 
                           {step.duration && (
-                            <div className="text-micro text-text-quaternary mt-2">
-                              ⏱️ {step.duration}
+                            <div className="flex items-center gap-1.5 text-micro text-text-quaternary mt-2">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12 6 12 12 16 14"/>
+                              </svg>
+                              {step.duration}
                             </div>
                           )}
                         </div>
                       </div>
                     </LinearCard>
-                  </motion.div>
+                    </motion.div>
+                  </div>
                 );
               })}
             </div>
@@ -319,21 +339,47 @@ const Flowchart = () => {
             {/* Completion Message */}
             {completedCount === totalSteps && totalSteps > 0 && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.2 }}
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
                 className="mt-12 text-center"
               >
-                <div className="text-6xl mb-4">🎉</div>
-                <h2 className="text-title-3 font-semibold mb-3">
+                <motion.div 
+                  className="mb-6"
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ delay: 0.5, type: "spring", stiffness: 200, damping: 15 }}
+                >
+                  <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mx-auto text-accent-hover">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                  </svg>
+                </motion.div>
+                <motion.h2 
+                  className="text-title-3 font-semibold mb-3"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7 }}
+                >
                   Congratulations!
-                </h2>
-                <p className="text-regular text-text-secondary mb-6">
+                </motion.h2>
+                <motion.p 
+                  className="text-regular text-text-secondary mb-8"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.8 }}
+                >
                   You've completed your entire learning path for {currentSkills}
-                </p>
-                <LinearButton variant="primary" size="large" onClick={() => navigate('/')}>
-                  Explore more careers
-                </LinearButton>
+                </motion.p>
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.9 }}
+                >
+                  <LinearButton variant="primary" size="large" onClick={() => navigate('/')}>
+                    Explore more careers
+                  </LinearButton>
+                </motion.div>
               </motion.div>
             )}
           </div>

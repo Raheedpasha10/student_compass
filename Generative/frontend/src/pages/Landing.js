@@ -1,13 +1,62 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import LinearButton from '../components/LinearButton';
 import LinearCard from '../components/LinearCard';
 import { categories, fieldsByCategory, domainsByField } from '../constants/careerData';
 
 // Lazy load mind map component
 const CareerMindMap = lazy(() => import('../components/CareerMindMap'));
+
+// Animated Stat Component
+const AnimatedStat = ({ stat, index, statsInView, setStatsInView }) => {
+  const [displayValue, setDisplayValue] = useState(0);
+  
+  useEffect(() => {
+    if (!statsInView || !stat.isNumber) return;
+    
+    const duration = 2000;
+    const steps = 60;
+    const increment = stat.value / steps;
+    const stepDuration = duration / steps;
+    let current = 0;
+    
+    const timer = setInterval(() => {
+      current += increment;
+      if (current >= stat.value) {
+        setDisplayValue(stat.value);
+        clearInterval(timer);
+      } else {
+        setDisplayValue(Math.floor(current));
+      }
+    }, stepDuration);
+    
+    return () => clearInterval(timer);
+  }, [statsInView, stat.value, stat.isNumber]);
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-50px" }}
+      onViewportEnter={() => setStatsInView(true)}
+      transition={{ delay: index * 0.1, duration: 0.5 }}
+      className="group"
+    >
+      <motion.div 
+        className="text-title-4 font-semibold text-accent-hover mb-2"
+        whileHover={{ scale: 1.05 }}
+        transition={{ duration: 0.2 }}
+      >
+        {stat.isNumber ? `${displayValue}${stat.suffix}` : stat.value}
+      </motion.div>
+      <div className="text-regular text-text-tertiary group-hover:text-text-secondary transition-colors">
+        {stat.label}
+      </div>
+    </motion.div>
+  );
+};
 
 // Path maps for mind map nodes
 const PATH_MAPS = {
@@ -40,6 +89,10 @@ const Landing = () => {
   const [heroBlur, setHeroBlur] = useState(0);
   const [heroOpacity, setHeroOpacity] = useState(1);
   const [isHovered, setIsHovered] = useState(false);
+  const [statsInView, setStatsInView] = useState(false);
+  const [activeStep, setActiveStep] = useState(0);
+  const [howItWorksScrollProgress, setHowItWorksScrollProgress] = useState(0);
+  const howItWorksRef = useRef(null);
 
   // Career data (must be defined before useEffect that uses it)
   const popularCareers = [
@@ -150,6 +203,59 @@ const Landing = () => {
 
     carouselContainer.addEventListener('scroll', handleCarouselScroll, { passive: true });
     return () => carouselContainer.removeEventListener('scroll', handleCarouselScroll);
+  }, [popularCareers.length]);
+
+  // Track active step in "How It Works" based on scroll position - Optimized for Lenis
+  useEffect(() => {
+    if (!howItWorksRef.current) return;
+
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const container = howItWorksRef.current;
+          if (!container) {
+            ticking = false;
+            return;
+          }
+
+          const containerRect = container.getBoundingClientRect();
+          const viewportHeight = window.innerHeight;
+          const scrollTop = window.scrollY;
+          
+          // Calculate when section starts (when top of section reaches top of viewport)
+          const containerTop = containerRect.top + scrollTop;
+          const sectionStart = containerTop;
+          
+          // Section scroll distance is 200vh (2 * viewportHeight)
+          const scrollDistance = viewportHeight * 2;
+          const progressValue = Math.max(0, Math.min(1, (scrollTop - sectionStart) / scrollDistance));
+          
+          // Store scroll progress for visual effects
+          setHowItWorksScrollProgress(progressValue);
+          
+          // Map progress to step index (0, 1, 2) with smooth transitions
+          // Step 0: 0-33%, Step 1: 33-66%, Step 2: 66-100%
+          let stepIndex;
+          if (progressValue < 0.33) {
+            stepIndex = 0;
+          } else if (progressValue < 0.66) {
+            stepIndex = 1;
+          } else {
+            stepIndex = 2;
+          }
+          
+          setActiveStep(stepIndex);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll(); // Initial check
+    
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const handleQuickSelect = (field) => {
@@ -175,11 +281,6 @@ const Landing = () => {
       navigate('/simplified-ultimate-roadmap');
   };
 
-  const resetSelection = () => {
-    setSelectedCategory('');
-    setSelectedField('');
-    setActiveTab('categories');
-  };
 
   const scrollToSection = (id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -226,23 +327,33 @@ const Landing = () => {
     const pathKey = PATTERN_TO_PATH[career.pattern];
     const nodes = PATH_MAPS[pathKey] || [];
 
-    // Minimal animated background
+    // Enhanced animated background with hover states
     const renderBackground = () => {
       switch (career.pattern) {
         case 'code':
           return (
-            <div className="absolute inset-0 opacity-[0.015]">
+            <motion.div 
+              className="absolute inset-0"
+              initial={{ opacity: 0.015 }}
+              animate={{ opacity: isHovered ? 0.025 : 0.015 }}
+              transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+            >
               <div className="absolute inset-0"
                 style={{
                   backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255,255,255,.5) 35px, rgba(255,255,255,.5) 36px)',
                   backgroundSize: '60px 60px',
                 }}
               />
-            </div>
+            </motion.div>
           );
         case 'chart':
           return (
-            <div className="absolute inset-0 opacity-[0.015]">
+            <motion.div 
+              className="absolute inset-0"
+              initial={{ opacity: 0.015 }}
+              animate={{ opacity: isHovered ? 0.025 : 0.015 }}
+              transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+            >
               <svg className="absolute inset-0 w-full h-full">
                 {[0, 1, 2].map((i) => (
                   <motion.line
@@ -264,11 +375,15 @@ const Landing = () => {
                   />
                 ))}
               </svg>
-            </div>
+            </motion.div>
           );
         case 'grid':
           return (
-            <div className="absolute inset-0 opacity-[0.015]"
+            <motion.div 
+              className="absolute inset-0"
+              initial={{ opacity: 0.015 }}
+              animate={{ opacity: isHovered ? 0.025 : 0.015 }}
+              transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
               style={{
                 backgroundImage: 'linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px)',
                 backgroundSize: '32px 32px',
@@ -277,7 +392,12 @@ const Landing = () => {
           );
         case 'trend':
           return (
-            <div className="absolute inset-0 opacity-[0.015]">
+            <motion.div 
+              className="absolute inset-0"
+              initial={{ opacity: 0.015 }}
+              animate={{ opacity: isHovered ? 0.025 : 0.015 }}
+              transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+            >
               {[0, 1, 2].map((i) => (
                 <motion.div
                   key={i}
@@ -299,7 +419,7 @@ const Landing = () => {
                   }}
                 />
               ))}
-            </div>
+            </motion.div>
           );
         default:
           return null;
@@ -312,7 +432,7 @@ const Landing = () => {
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         className="relative w-full snap-start"
-        whileHover={{ y: -6 }}
+        whileHover={{ y: -8, scale: 1.02 }}
         transition={{
           type: "spring",
           damping: 20,
@@ -472,8 +592,36 @@ const Landing = () => {
     );
   };
 
+  // Scroll progress indicator
+  const [scrollProgress, setScrollProgress] = useState(0);
+  
+  useEffect(() => {
+    const handleScroll = () => {
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+      const scrollTop = window.scrollY;
+      const progress = (scrollTop / (documentHeight - windowHeight)) * 100;
+      setScrollProgress(Math.min(100, Math.max(0, progress)));
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-bg-primary text-text-primary">
+    <div className="min-h-screen bg-bg-primary text-text-primary relative">
+      {/* Scroll Progress Indicator */}
+      <motion.div
+        className="fixed top-0 left-0 right-0 h-0.5 z-[200] pointer-events-none"
+        style={{ 
+          background: 'linear-gradient(to right, var(--color-accent), var(--color-accent-hover))',
+          transformOrigin: 'left',
+          scaleX: scrollProgress / 100,
+        }}
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: scrollProgress / 100 }}
+        transition={{ duration: 0.1, ease: 'linear' }}
+      />
       {/* Hero Section - Balanced Linear Composition */}
       <section ref={heroRef} className="relative" style={{ minHeight: '135vh', paddingTop: '64px', paddingBottom: '80px', background: '#08090a', overflow: 'hidden' }}>
         <div className="w-full h-full flex flex-col justify-center">
@@ -487,11 +635,11 @@ const Landing = () => {
                 transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
               >
               <motion.h1 
-                  className="font-semibold mb-4"
+                  className="font-semibold mb-6"
                   style={{
                     fontSize: 'clamp(2.5rem, 5vw, 4rem)',
                     lineHeight: '1.15',
-                    letterSpacing: '-.022em',
+                    letterSpacing: '-.028em',
                     color: '#f7f8f8',
                     fontWeight: 590
                   }}
@@ -503,12 +651,12 @@ const Landing = () => {
               </motion.h1>
               
               <motion.p 
-                  className="mb-10"
+                  className="mb-12"
                   style={{ 
                     lineHeight: '1.6', 
                     color: '#8a8f98',
                     fontSize: 'clamp(1rem, 1.5vw, 1.25rem)',
-                    maxWidth: '580px',
+                    maxWidth: '520px',
                     margin: '0 auto',
                     fontWeight: 400
                   }}
@@ -520,10 +668,10 @@ const Landing = () => {
               </motion.p>
               
                 <motion.div 
-                  className="flex items-center justify-center gap-3"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: animationStage >= 3 ? 1 : 0 }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
+                  className="flex items-center justify-center gap-4"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: animationStage >= 3 ? 1 : 0, y: animationStage >= 3 ? 0 : 10 }}
+                  transition={{ duration: 0.6, delay: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
                 >
                   <LinearButton
                     variant="primary"
@@ -595,7 +743,7 @@ const Landing = () => {
               }}
             />
 
-            {/* Mockup Container - Cinematic with Floating Animation */}
+            {/* Mockup Container - Cinematic with Floating Animation and Parallax */}
             <motion.div 
               initial={{ opacity: 0, y: 40 }}
               animate={{ 
@@ -623,6 +771,10 @@ const Landing = () => {
                 transformStyle: 'preserve-3d',
                 willChange: 'transform, opacity, filter',
               }}
+              whileInView={{ 
+                y: [0, -4, 0],
+              }}
+              viewport={{ once: false, margin: "-100px" }}
             >
               {/* Dramatic 3D Interface Container - "Sleeping" Perspective */}
                 <motion.div
@@ -858,36 +1010,116 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* How It Works Section - Full Viewport */}
-      <section className="relative flex items-center border-t border-border-primary" style={{ minHeight: '100vh' }}>
-        <div className="w-full px-6 py-24">
-          <div className="max-w-6xl mx-auto">
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-              className="text-center mb-12"
-            >
-              <h2 
-                className="text-title-5 font-semibold mb-4 text-white"
-                style={{ letterSpacing: '-.022em' }}
-              >
-                How it works
-              </h2>
-              <p className="text-large text-text-secondary max-w-2xl mx-auto">
-                Three simple steps to accelerate your career journey
-              </p>
-            </motion.div>
+      {/* How It Works Section - Scroll-based Storytelling */}
+      <section 
+        ref={howItWorksRef}
+        className="relative border-t border-border-primary"
+        style={{ minHeight: '200vh' }}
+      >
+        {/* Sticky container for smooth transitions */}
+        <div className="sticky top-0 w-full h-screen overflow-hidden bg-bg-primary">
+          {/* Clean Linear/Apple-style background - completely minimal */}
+          {/* Background is handled by bg-bg-primary on parent div - no decorative elements */}
 
-            <div className="grid md:grid-cols-3 gap-12">
+          {/* Fixed Header - Linear minimal style */}
+          <div className="absolute top-0 left-0 right-0 z-20 pt-20 pb-12 px-6">
+            <div className="max-w-7xl mx-auto">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+                className="text-center"
+              >
+                <h2 
+                  className="text-title-5 font-semibold mb-5 text-text-primary"
+                  style={{ letterSpacing: '-.022em' }}
+                >
+                  How it works
+                </h2>
+                <p className="text-large text-text-secondary max-w-2xl mx-auto leading-relaxed">
+                  Three simple steps to accelerate your career journey
+                </p>
+              </motion.div>
+            </div>
+          </div>
+
+          {/* Step Indicator - Fixed on left, Linear minimal style */}
+          <div className="absolute left-8 top-1/2 -translate-y-1/2 z-30 hidden lg:block">
+            <div className="flex flex-col gap-6">
+              {[0, 1, 2].map((index) => (
+                <motion.div
+                  key={index}
+                  className="flex items-center gap-3 cursor-pointer"
+                  onClick={() => {
+                    // Smooth scroll to step position
+                    if (howItWorksRef.current) {
+                      const containerTop = howItWorksRef.current.offsetTop;
+                      const viewportHeight = window.innerHeight;
+                      const targetScroll = containerTop - viewportHeight + (viewportHeight * 2 * index / 3);
+                      window.scrollTo({ top: targetScroll, behavior: 'smooth' });
+                    }
+                  }}
+                  animate={{
+                    opacity: activeStep === index ? 1 : 0.25,
+                  }}
+                  transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  whileHover={{
+                    opacity: activeStep === index ? 1 : 0.5
+                  }}
+                >
+                  <motion.div
+                    className="rounded-full"
+                    style={{ 
+                      background: activeStep === index ? 'var(--color-text-primary)' : 'var(--color-border-primary)',
+                      width: activeStep === index ? '6px' : '3px',
+                      height: activeStep === index ? '24px' : '3px',
+                    }}
+                    animate={{
+                      scale: activeStep === index ? 1 : 0.8,
+                    }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 400,
+                      damping: 25
+                    }}
+                  />
+                  <motion.span
+                    className="text-micro font-semibold"
+                    style={{ 
+                      letterSpacing: '0.1em',
+                      color: activeStep === index ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)'
+                    }}
+                    animate={{
+                      x: activeStep === index ? 0 : -6,
+                      opacity: activeStep === index ? 1 : 0.4
+                    }}
+                    transition={{ 
+                      duration: 0.5,
+                      ease: [0.25, 0.46, 0.45, 0.94]
+                    }}
+                  >
+                    {String(index + 1).padStart(2, '0')}
+                  </motion.span>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {/* Content Area - Dynamic transitions based on scroll */}
+          <div className="absolute inset-0 flex items-center justify-center px-6 lg:px-12 z-10" style={{ isolation: 'isolate' }}>
+            <div className="max-w-6xl w-full">
               {[
                 {
                   step: '01',
                   title: 'Choose your path',
-                  description: 'Select from hundreds of career paths across technology, healthcare, business, and more',
+                  description: 'Select from hundreds of career paths across technology, healthcare, business, and more. Our AI analyzes your interests and suggests the best fit for your goals.',
+                  details: [
+                    'Browse 200+ career paths with detailed insights',
+                    'AI-powered recommendations based on your interests',
+                    'Salary data, growth projections, and career outlooks'
+                  ],
                   icon: (
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                       <circle cx="12" cy="12" r="10"/>
                       <polygon points="10 8 16 12 10 16 10 8"/>
                     </svg>
@@ -896,9 +1128,14 @@ const Landing = () => {
                 {
                   step: '02',
                   title: 'Get your roadmap',
-                  description: 'Receive a personalized learning roadmap with milestones, resources, and timelines',
+                  description: 'Receive a personalized learning roadmap with milestones, resources, and timelines. Track your progress with interactive visualizations that adapt to your pace.',
+                  details: [
+                    'Personalized learning paths tailored to your level',
+                    'Milestone tracking with clear objectives',
+                    'Curated resources from industry experts'
+                  ],
                   icon: (
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
                     </svg>
                   )
@@ -906,50 +1143,271 @@ const Landing = () => {
                 {
                   step: '03',
                   title: 'Track progress',
-                  description: 'Monitor your growth with interactive flowcharts and achievement tracking',
+                  description: 'Monitor your growth with interactive flowcharts and achievement tracking. Get insights into your learning journey and celebrate milestones along the way.',
+                  details: [
+                    'Interactive flowcharts for visual progress tracking',
+                    'Achievement badges for completed milestones',
+                    'Progress analytics and learning insights'
+                  ],
                   icon: (
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="22 11 12 2 2 11"/>
                       <path d="M2 11v10a1 1 0 001 1h5"/>
                       <path d="M22 21v-10l-10-9"/>
                     </svg>
                   )
                 }
-              ].map((item, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ 
-                    delay: index * 0.15, 
-                    duration: 0.5,
-                    type: "spring",
-                    stiffness: 300,
-                    damping: 25
-                  }}
-                >
-                  <div className="text-accent-hover mb-6">
-                    {item.icon}
-                  </div>
-                  <div 
-                    className="text-micro font-semibold mb-3 text-text-quaternary"
-                    style={{ letterSpacing: '0.05em' }}
+              ].map((item, index) => {
+                const isActive = activeStep === index;
+                const opacity = isActive ? 1 : 0;
+                const yOffset = isActive ? 0 : (index < activeStep ? -40 : 40);
+                const scale = isActive ? 1 : 0.92;
+                
+                return (
+                  <motion.div
+                    key={index}
+                    className="absolute inset-0 flex items-center justify-center"
+                    style={{ 
+                      pointerEvents: isActive ? 'auto' : 'none',
+                      transformStyle: 'preserve-3d',
+                      perspective: '1000px',
+                    }}
+                    animate={{
+                      opacity: opacity,
+                      y: yOffset,
+                      scale: scale,
+                      rotateX: isActive ? Math.sin(howItWorksScrollProgress * Math.PI) * 2 : 0,
+                      z: isActive ? 0 : -50,
+                    }}
+                    transition={{
+                      duration: 0.8,
+                      ease: [0.25, 0.46, 0.45, 0.94]
+                    }}
                   >
-                    {item.step}
-                  </div>
-                  <h3 className="text-title-2 font-semibold mb-3 text-white" style={{ letterSpacing: '-.012em' }}>
-                    {item.title}
-                  </h3>
-                  <p className="text-regular text-text-secondary leading-relaxed">
-                    {item.description}
-                  </p>
-              </motion.div>
-              ))}
+                    <div className="w-full max-w-5xl px-6">
+                      <div className="grid lg:grid-cols-[1.1fr,1fr] gap-12 lg:gap-20 items-center" style={{ transformStyle: 'preserve-3d' }}>
+                        {/* Left: Icon and Title - parallax layer 1 */}
+                        <motion.div
+                          className="flex flex-col items-start"
+                          style={{
+                            transformStyle: 'preserve-3d',
+                          }}
+                          animate={{
+                            opacity: isActive ? 1 : 0,
+                            x: isActive ? 0 : -60,
+                            y: isActive ? howItWorksScrollProgress * -20 : 0,
+                            rotateY: isActive ? Math.sin(howItWorksScrollProgress * Math.PI) * 3 : 0,
+                            z: isActive ? 30 : 0,
+                          }}
+                          transition={{
+                            duration: 0.7,
+                            delay: isActive ? 0.15 : 0,
+                            ease: [0.25, 0.46, 0.45, 0.94]
+                          }}
+                        >
+                          {/* Step Number */}
+                          <motion.span
+                            className="text-micro font-semibold text-text-tertiary mb-8"
+                            style={{ letterSpacing: '0.12em' }}
+                            animate={{
+                              opacity: isActive ? 1 : 0,
+                              y: isActive ? 0 : 10
+                            }}
+                            transition={{ delay: isActive ? 0.2 : 0, duration: 0.5 }}
+                          >
+                            {item.step}
+                          </motion.span>
+
+                          {/* Icon with physics - 3D depth */}
+                          <motion.div
+                            className="mb-10 text-text-primary"
+                            style={{
+                              transformStyle: 'preserve-3d',
+                            }}
+                            animate={{
+                              opacity: isActive ? 1 : 0,
+                              scale: isActive ? 1 : 0.85,
+                              y: isActive ? 0 : 20,
+                              rotateY: isActive ? Math.sin(howItWorksScrollProgress * Math.PI * 2) * 8 : 0,
+                              rotateX: isActive ? Math.cos(howItWorksScrollProgress * Math.PI * 2) * 5 : 0,
+                              z: isActive ? 50 : 0,
+                            }}
+                            transition={{
+                              delay: isActive ? 0.3 : 0,
+                              type: "spring",
+                              stiffness: 160,
+                              damping: 22,
+                              mass: 1
+                            }}
+                            whileHover={isActive ? {
+                              scale: 1.08,
+                              y: -6,
+                              rotateY: 5,
+                              rotateX: -3,
+                              z: 60,
+                              transition: {
+                                type: "spring",
+                                stiffness: 350,
+                                damping: 18
+                              }
+                            } : {}}
+                          >
+                            {item.icon}
+                          </motion.div>
+
+                          {/* Title */}
+                          <motion.h3
+                            className="text-title-4 lg:text-title-3 font-semibold mb-8 text-text-primary"
+                            style={{ letterSpacing: '-.012em', lineHeight: '1.15' }}
+                            animate={{
+                              opacity: isActive ? 1 : 0,
+                              y: isActive ? 0 : 15
+                            }}
+                            transition={{ 
+                              delay: isActive ? 0.4 : 0, 
+                              duration: 0.6,
+                              ease: [0.25, 0.46, 0.45, 0.94]
+                            }}
+                          >
+                            {item.title}
+                          </motion.h3>
+                        </motion.div>
+
+                        {/* Right: Description and Details - parallax layer 2 */}
+                        <motion.div
+                          className="flex flex-col"
+                          style={{
+                            transformStyle: 'preserve-3d',
+                          }}
+                          animate={{
+                            opacity: isActive ? 1 : 0,
+                            x: isActive ? 0 : 60,
+                            y: isActive ? howItWorksScrollProgress * -15 : 0,
+                            rotateY: isActive ? Math.sin(howItWorksScrollProgress * Math.PI) * -2 : 0,
+                            z: isActive ? 20 : 0,
+                          }}
+                          transition={{
+                            duration: 0.7,
+                            delay: isActive ? 0.25 : 0,
+                            ease: [0.25, 0.46, 0.45, 0.94]
+                          }}
+                        >
+                          {/* Description */}
+                          <motion.p
+                            className="text-large lg:text-xl text-text-secondary leading-relaxed mb-10"
+                            animate={{
+                              opacity: isActive ? 1 : 0,
+                              y: isActive ? 0 : 20
+                            }}
+                            transition={{ 
+                              delay: isActive ? 0.5 : 0, 
+                              duration: 0.6 
+                            }}
+                          >
+                            {item.description}
+                          </motion.p>
+
+                          {/* Feature Details */}
+                          <motion.div
+                            className="space-y-5"
+                            animate={{
+                              opacity: isActive ? 1 : 0
+                            }}
+                            transition={{ 
+                              delay: isActive ? 0.6 : 0, 
+                              duration: 0.5 
+                            }}
+                          >
+                            {item.details.map((detail, i) => (
+                              <motion.div
+                                key={i}
+                                className="flex items-start gap-4 group/detail cursor-default"
+                                animate={{
+                                  opacity: isActive ? 1 : 0,
+                                  x: isActive ? 0 : -15
+                                }}
+                                transition={{ 
+                                  delay: isActive ? 0.7 + i * 0.08 : 0,
+                                  duration: 0.5,
+                                  ease: [0.25, 0.46, 0.45, 0.94]
+                                }}
+                                whileHover={isActive ? {
+                                  x: 6,
+                                  transition: {
+                                    type: "spring",
+                                    stiffness: 400,
+                                    damping: 20
+                                  }
+                                } : {}}
+                              >
+                                <motion.div
+                                  className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0"
+                                  style={{ background: 'var(--color-border-primary)' }}
+                                  animate={{
+                                    scale: isActive ? 1 : 0,
+                                  }}
+                                  transition={{
+                                    delay: isActive ? 0.7 + i * 0.08 : 0,
+                                    type: "spring",
+                                    stiffness: 600,
+                                    damping: 30
+                                  }}
+                                  whileHover={isActive ? {
+                                    scale: 1.5,
+                                    backgroundColor: 'var(--color-border-secondary)',
+                                    transition: {
+                                      type: "spring",
+                                      stiffness: 500,
+                                      damping: 20
+                                    }
+                                  } : {}}
+                                />
+                                <motion.span
+                                  className="text-regular lg:text-large text-text-tertiary group-hover/detail:text-text-secondary transition-colors"
+                                >
+                                  {detail}
+                                </motion.span>
+                              </motion.div>
+                            ))}
+                          </motion.div>
+                        </motion.div>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
           </div>
+
+          {/* Scroll Hint - Bottom indicator */}
+          <motion.div
+            className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 hidden lg:flex flex-col items-center gap-2"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ 
+              opacity: activeStep < 2 ? 1 : 0,
+              y: activeStep < 2 ? 0 : 10
+            }}
+            transition={{ duration: 0.3 }}
+          >
+            <span className="text-micro text-text-tertiary">Scroll to continue</span>
+            <motion.div
+              animate={{ y: [0, 4, 0] }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </motion.div>
+          </motion.div>
         </div>
-        </section>
+
+        {/* Scroll Spacer - Creates scroll distance for smooth step transitions */}
+        <div style={{ height: '200vh', pointerEvents: 'none' }} />
+      </section>
 
       {/* Popular Careers Section - Cinematic Storytelling Layout */}
       <section 
@@ -1040,11 +1498,13 @@ const Landing = () => {
                     className="h-1 rounded-full transition-all cursor-pointer focus:outline-none"
                     animate={{
                       width: i === activeCareerIndex ? 32 : 8,
-                      background: i === activeCareerIndex ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.08)'
+                      background: i === activeCareerIndex ? 'rgba(113, 112, 255, 0.6)' : 'rgba(255,255,255,0.08)',
+                      boxShadow: i === activeCareerIndex ? '0 0 12px rgba(113, 112, 255, 0.4)' : 'none'
                     }}
                     whileHover={{ 
-                      scale: 1.2,
-                      background: 'rgba(255,255,255,0.3)'
+                      scale: 1.3,
+                      background: 'rgba(113, 112, 255, 0.5)',
+                      boxShadow: '0 0 8px rgba(113, 112, 255, 0.3)'
                     }}
                     whileTap={{ scale: 0.95 }}
                     transition={{
@@ -1157,6 +1617,37 @@ const Landing = () => {
               </div>
             </div>
             
+            {/* Breadcrumb Navigation */}
+            {(activeTab === 'fields' || activeTab === 'specializations') && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center justify-center gap-2 mb-8 text-small text-text-tertiary"
+              >
+                <button
+                  onClick={() => setActiveTab('categories')}
+                  className="hover:text-text-primary transition-colors"
+                >
+                  Categories
+                </button>
+                <span>/</span>
+                {activeTab === 'specializations' && (
+                  <>
+                    <button
+                      onClick={() => setActiveTab('fields')}
+                      className="hover:text-text-primary transition-colors"
+                    >
+                      {selectedCategory && categories.find(c => c.id === selectedCategory)?.name}
+                    </button>
+                    <span>/</span>
+                  </>
+                )}
+                <span className="text-text-primary">
+                  {activeTab === 'fields' ? 'Fields' : 'Specializations'}
+                </span>
+              </motion.div>
+            )}
+
             {/* Tab Content */}
               <AnimatePresence mode="wait">
                 {activeTab === 'categories' && (
@@ -1165,7 +1656,7 @@ const Landing = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
+                  transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
                   className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
                 >
                   {categories.map((category, index) => (
@@ -1173,25 +1664,43 @@ const Landing = () => {
                       key={category.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.03 }}
+                      transition={{ delay: index * 0.02, duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
                     >
                       <LinearCard
                           onClick={() => handleCategorySelect(category.id)}
-                        className="p-4 cursor-pointer"
+                        className="p-4 cursor-pointer relative group"
                       >
+                        {/* Active border accent */}
+                        <motion.div
+                          className="absolute left-0 top-0 bottom-0 w-1 rounded-l-12 bg-accent opacity-0 group-hover:opacity-100"
+                          initial={{ scaleY: 0 }}
+                          whileHover={{ scaleY: 1, opacity: 1 }}
+                          transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+                          style={{ transformOrigin: 'top' }}
+                        />
                         <div className="flex items-center gap-3">
                           <span className="text-xl">{category.icon}</span>
                           <div className="flex-grow">
-                            <div className="text-small font-medium text-text-primary">
+                            <div className="text-small font-medium text-text-primary group-hover:text-text-primary transition-colors">
                               {category.name}
                             </div>
                             <div className="text-micro text-text-tertiary">
                               {category.description}
                             </div>
                           </div>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-quaternary">
+                          <motion.svg 
+                            width="16" 
+                            height="16" 
+                            viewBox="0 0 24 24" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            strokeWidth="2" 
+                            className="text-text-quaternary group-hover:text-text-primary transition-colors"
+                            whileHover={{ x: 2 }}
+                            transition={{ duration: 0.2 }}
+                          >
                             <path d="m9 18 6-6-6-6" />
-                          </svg>
+                          </motion.svg>
                           </div>
                       </LinearCard>
                         </motion.div>
@@ -1205,31 +1714,43 @@ const Landing = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
+                  transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
                 >
-                  <div className="mb-6 text-center">
-                    <LinearButton variant="ghost" size="small" onClick={resetSelection}>
-                      ← Back to categories
-                    </LinearButton>
-                      </div>
-                      
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {fields.map((field, index) => (
                         <motion.div
                           key={index}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.03 }}
+                        transition={{ delay: index * 0.02, duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
                       >
                         <LinearCard
                           onClick={() => handleFieldSelect(field)}
-                          className="p-4 cursor-pointer"
+                          className="p-4 cursor-pointer relative group"
                         >
+                          {/* Active border accent */}
+                          <motion.div
+                            className="absolute left-0 top-0 bottom-0 w-1 rounded-l-12 bg-accent opacity-0 group-hover:opacity-100"
+                            initial={{ scaleY: 0 }}
+                            whileHover={{ scaleY: 1, opacity: 1 }}
+                            transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+                            style={{ transformOrigin: 'top' }}
+                          />
                           <div className="flex items-center justify-between">
-                            <span className="text-small font-medium text-text-primary">{field}</span>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-quaternary">
+                            <span className="text-small font-medium text-text-primary group-hover:text-text-primary transition-colors">{field}</span>
+                            <motion.svg 
+                              width="16" 
+                              height="16" 
+                              viewBox="0 0 24 24" 
+                              fill="none" 
+                              stroke="currentColor" 
+                              strokeWidth="2" 
+                              className="text-text-quaternary group-hover:text-text-primary transition-colors"
+                              whileHover={{ x: 2 }}
+                              transition={{ duration: 0.2 }}
+                            >
                               <path d="m9 18 6-6-6-6" />
-                            </svg>
+                            </motion.svg>
                           </div>
                         </LinearCard>
                         </motion.div>
@@ -1244,31 +1765,38 @@ const Landing = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
+                  transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
                 >
-                  <div className="mb-6 text-center">
-                    <LinearButton variant="ghost" size="small" onClick={() => setActiveTab('fields')}>
-                      ← Back to fields
-                    </LinearButton>
-                  </div>
-
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {domains.map((domain, index) => (
                       <motion.div
                         key={index}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.03 }}
+                        transition={{ delay: index * 0.02, duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
                       >
                         <LinearCard
                           onClick={() => handleDomainSelect(domain)}
-                          className="p-4 cursor-pointer"
+                          className="p-4 cursor-pointer relative group"
                         >
+                          {/* Active border accent */}
+                          <motion.div
+                            className="absolute left-0 top-0 bottom-0 w-1 rounded-l-12 bg-accent opacity-0 group-hover:opacity-100"
+                            initial={{ scaleY: 0 }}
+                            whileHover={{ scaleY: 1, opacity: 1 }}
+                            transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+                            style={{ transformOrigin: 'top' }}
+                          />
                           <div className="flex items-center justify-between">
-                            <span className="text-small font-medium text-text-primary">{domain}</span>
-                            <LinearButton variant="ghost" size="mini">
-                              Explore
-                            </LinearButton>
+                            <span className="text-small font-medium text-text-primary group-hover:text-text-primary transition-colors">{domain}</span>
+                            <motion.div
+                              whileHover={{ x: 2 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <LinearButton variant="ghost" size="mini" className="group-hover:text-text-primary">
+                                Explore
+                              </LinearButton>
+                            </motion.div>
                           </div>
                         </LinearCard>
                       </motion.div>
@@ -1301,25 +1829,18 @@ const Landing = () => {
 
                 <div className="grid grid-cols-2 gap-8">
                   {[
-                    { value: '50K+', label: 'Students guided' },
-                    { value: '200+', label: 'Career paths' },
-                    { value: '95%', label: 'Success rate' },
-                    { value: '24/7', label: 'AI assistance' }
+                    { value: 50, suffix: 'K+', label: 'Students guided', isNumber: true },
+                    { value: 200, suffix: '+', label: 'Career paths', isNumber: true },
+                    { value: 95, suffix: '%', label: 'Success rate', isNumber: true },
+                    { value: '24/7', suffix: '', label: 'AI assistance', isNumber: false }
                   ].map((stat, index) => (
-                    <motion.div
+                    <AnimatedStat
                       key={index}
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: index * 0.1, duration: 0.5 }}
-                    >
-                      <div className="text-title-4 font-semibold text-accent-hover mb-2">
-                        {stat.value}
-                      </div>
-                      <div className="text-regular text-text-tertiary">
-                        {stat.label}
-                      </div>
-                    </motion.div>
+                      stat={stat}
+                      index={index}
+                      statsInView={statsInView}
+                      setStatsInView={setStatsInView}
+                    />
                   ))}
                     </div>
               </motion.div>
@@ -1349,24 +1870,37 @@ const Landing = () => {
                         initial={{ opacity: 0, x: 20 }}
                         whileInView={{ opacity: 1, x: 0 }}
                         viewport={{ once: true }}
-                        transition={{ delay: 0.2 + index * 0.1 }}
-                        className="p-4 rounded-8"
+                        transition={{ delay: 0.2 + index * 0.1, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+                        className="p-4 rounded-8 cursor-default group"
                           style={{
                           background: 'rgba(255, 255, 255, 0.03)',
-                          border: '0.5px solid rgba(255, 255, 255, 0.05)'
+                          border: '0.5px solid rgba(255, 255, 255, 0.05)',
+                          transition: 'all 0.3s cubic-bezier(.25, .46, .45, .94)'
+                        }}
+                        whileHover={{ 
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          borderColor: 'rgba(255, 255, 255, 0.1)',
+                          y: -2
                         }}
                       >
-                        <p className="text-small text-text-secondary mb-3">"{testimonial.feedback}"</p>
+                        <p className="text-small text-text-secondary mb-3 group-hover:text-text-primary transition-colors">"{testimonial.feedback}"</p>
                         <div className="flex items-center gap-3">
-                          <div 
-                            className="w-8 h-8 rounded-full flex items-center justify-center text-micro font-semibold"
+                          <motion.div 
+                            className="w-10 h-10 rounded-full flex items-center justify-center text-micro font-semibold relative"
                             style={{ background: 'var(--color-brand-bg)', color: 'white' }}
+                            whileHover={{ scale: 1.1 }}
+                            transition={{ duration: 0.2 }}
                           >
+                            <motion.div
+                              className="absolute inset-0 rounded-full border-2 border-accent opacity-0 group-hover:opacity-100"
+                              animate={{ scale: [1, 1.3, 1], opacity: [0, 0.5, 0] }}
+                              transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut" }}
+                            />
                             {testimonial.name[0]}
-                          </div>
+                          </motion.div>
                           <div>
-                            <div className="text-small font-medium text-text-primary">{testimonial.name}</div>
-                            <div className="text-micro text-text-tertiary">{testimonial.role}</div>
+                            <div className="text-small font-medium text-text-primary group-hover:text-text-primary transition-colors">{testimonial.name}</div>
+                            <div className="text-micro text-text-tertiary group-hover:text-text-secondary transition-colors">{testimonial.role}</div>
                           </div>
                           </div>
                         </motion.div>
@@ -1380,24 +1914,74 @@ const Landing = () => {
         </section>
 
       {/* Final CTA Section - Full Viewport */}
-      <section className="relative flex items-center border-t border-border-primary" style={{ minHeight: '100vh' }}>
-        <div className="w-full px-6 py-24">
+      <section className="relative flex items-center border-t border-border-primary overflow-hidden" style={{ minHeight: '100vh' }}>
+        {/* Background gradient */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div 
+            className="absolute"
+            style={{
+              left: '50%',
+              top: '50%',
+              width: '100%',
+              height: '100%',
+              transform: 'translate(-50%, -50%)',
+              background: 'radial-gradient(ellipse at center, rgba(113, 112, 255, 0.08) 0%, transparent 70%)',
+              filter: 'blur(100px)',
+            }}
+          />
+        </div>
+
+        <div className="w-full px-6 py-24 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
+              transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
             >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                whileInView={{ scale: 1, opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="mb-8"
+              >
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mx-auto text-accent-hover">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+              </motion.div>
+
               <h2 
                 className="text-title-6 font-semibold mb-6 text-white"
                 style={{ letterSpacing: '-.022em' }}
               >
                 Ready to start your journey?
               </h2>
-              <p className="text-xl text-text-secondary mb-12 max-w-2xl mx-auto leading-relaxed">
+              <p className="text-xl text-text-secondary mb-8 max-w-2xl mx-auto leading-relaxed">
                 Join thousands of students discovering their perfect career path with personalized AI guidance
               </p>
+
+              {/* Feature highlights */}
+              <div className="flex flex-wrap justify-center gap-6 mb-12 text-small text-text-tertiary">
+                <div className="flex items-center gap-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  <span>AI-powered roadmaps</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  <span>Progress tracking</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  <span>Free to start</span>
+                </div>
+              </div>
 
               <div className="flex flex-wrap justify-center gap-4">
                 <LinearButton

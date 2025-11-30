@@ -1,4 +1,4 @@
-# 🧭 Student Compass - AI-Powered Career Guidance Platform
+# 🧭 Student Compass - AI-Powered Career Navigation Platform
 
 A modern, interactive career guidance platform that provides personalized career mentorship, roadmap planning, and skill development guidance. Built with cutting-edge AI integration and a sleek, responsive interface.
 
